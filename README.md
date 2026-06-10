@@ -142,3 +142,4 @@ Include screenshots highlighting important features and functionalities of the a
 * The application was tested locally using the Flask development server.
 * Screenshots included in this document represent the actual execution of the project.
 
+
