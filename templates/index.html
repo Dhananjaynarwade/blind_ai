@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Blind Vision{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1>Blind Vision</h1>
+        <p class="hero-subtitle">Empowering the visually impaired through AI-powered technology</p>
+        <div class="hero-cta">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('dashboard') }}" class="hero-btn primary">Go to Dashboard</a>
+                <a href="{{ url_for('services') }}" class="hero-btn secondary">Explore Features</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="hero-btn primary">Get Started</a>
+                <a href="{{ url_for('about') }}" class="hero-btn secondary">Learn More</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="features-section">
+    <div class="container">
+        <h2 class="section-title">Key Features</h2>
+        <div class="features-grid">
+            <div class="feature-item">
+                <div class="feature-icon">🔍</div>
+                <h3>Object Detection</h3>
+                <p>Identify objects in your surroundings with real-time audio feedback, photo capture, and video recording capabilities.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">🧭</div>
+                <h3>Navigation Assistance</h3>
+                <p>Navigate safely with obstacle detection, directional awareness, and adaptive guidance based on your environment.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">📝</div>
+                <h3>Environment Storytelling</h3>
+                <p>Experience rich descriptions of your surroundings, helping you form a comprehensive mental image of the space around you.</p>
+            </div>
+            <div class="feature-item">
+                <div class="feature-icon">🎨</div>
+                <h3>Color Detection</h3>
+                <p>Identify colors with precision, perfect for tasks like matching clothing or identifying objects by their color.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="how-it-works">
+    <div class="container">
+        <h2 class="section-title">How It Works</h2>
+        <div class="steps-container">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Register & Login</h3>
+                <p>Create an account to access all Blind Vision features securely.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Allow Camera Access</h3>
+                <p>Our system uses your device's camera to detect objects and analyze your surroundings.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Explore Features</h3>
+                <p>Navigate through our suite of tools designed to enhance your independence and experience.</p>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <h3>Receive Assistance</h3>
+                <p>Get real-time feedback through audio descriptions and guidance as you interact with your environment.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="testimonials-section">
+    <div class="container">
+        <h2 class="section-title">What Our Users Say</h2>
+        <div class="testimonials-container">
+            <div class="testimonial">
+                <div class="testimonial-content">
+                    <p>"Blind Vision has completely transformed how I navigate my daily life. The object detection feature helps me identify obstacles I would have missed otherwise."</p>
+                </div>
+                <div class="testimonial-author">
+                    <p class="author-name">Sarah J.</p>
+                    <p class="author-title">User since 2023</p>
+                </div>
+            </div>
+            <div class="testimonial">
+                <div class="testimonial-content">
+                    <p>"The storytelling feature gives me a much better understanding of my surroundings than I've experienced with any other assistive technology."</p>
+                </div>
+                <div class="testimonial-author">
+                    <p class="author-name">Michael T.</p>
+                    <p class="author-title">User since 2022</p>
+                </div>
+            </div>
+            <div class="testimonial">
+                <div class="testimonial-content">
+                    <p>"As someone who works with visually impaired individuals, I've recommended Blind Vision to many clients. The color detection feature in particular has been invaluable."</p>
+                </div>
+                <div class="testimonial-author">
+                    <p class="author-name">Dr. Rachel K.</p>
+                    <p class="author-title">Accessibility Specialist</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="cta-section">
+    <div class="container">
+        <div class="cta-content">
+            <h2>Ready to Experience the World in a New Way?</h2>
+            <p>Join thousands of users who are using Blind Vision to enhance their independence and quality of life.</p>
+            <div class="cta-buttons">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}" class="cta-btn">Go to Dashboard</a>
+                {% else %}
+                    <a href="{{ url_for('register') }}" class="cta-btn">Sign Up Today</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Hero Section */
+    .hero-section {
+        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80') no-repeat center center;
+        background-size: cover;
+        color: white;
+        padding: 120px 0;
+        text-align: center;
+        margin-top: -20px;
+        position: relative;
+    }
+    
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 50px;
+        background: linear-gradient(to top, #f4f4f4, transparent);
+    }
+    
+    .hero-content {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 20px;
+        animation: fadeInUp 1s ease;
+    }
+    
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .hero-content h1 {
+        font-size: 3.5rem;
+        margin-bottom: 20px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+    
+    .hero-subtitle {
+        font-size: 1.5rem;
+        margin-bottom: 40px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    }
+    
+    .hero-cta {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .hero-btn {
+        padding: 14px 30px;
+        border-radius: 50px;
+        font-weight: bold;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .hero-btn.primary {
+        background-color: #fff;
+        color: #333;
+    }
+    
+    .hero-btn.primary:hover {
+        background-color: #f0f0f0;
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .hero-btn.secondary {
+        background-color: transparent;
+        color: white;
+        border: 2px solid white;
+    }
+    
+    .hero-btn.secondary:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Features Section */
+    .features-section {
+        padding: 80px 0;
+        background-color: #f9f9f9;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .section-title {
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 50px;
+        color: #333;
+        position: relative;
+    }
+    
+    .section-title::after {
+        content: '';
+        display: block;
+        width: 80px;
+        height: 3px;
+        background: #333;
+        margin: 15px auto 0;
+    }
+    
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px;
+    }
+    
+    .feature-item {
+        background-color: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        text-align: center;
+        border-bottom: 3px solid transparent;
+    }
+    
+    .feature-item:nth-child(1) { border-bottom-color: #4CAF50; }
+    .feature-item:nth-child(2) { border-bottom-color: #2196F3; }
+    .feature-item:nth-child(3) { border-bottom-color: #9C27B0; }
+    .feature-item:nth-child(4) { border-bottom-color: #FF9800; }
+    
+    .feature-item:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+    }
+    
+    .feature-icon {
+        font-size: 3.5rem;
+        margin-bottom: 20px;
+        display: inline-block;
+    }
+    
+    .feature-item h3 {
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .feature-item p {
+        color: #666;
+        line-height: 1.6;
+    }
+    
+    /* How It Works Section */
+    .how-it-works {
+        padding: 100px 0;
+        background-color: white;
+        position: relative;
+    }
+    
+    .steps-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 40px;
+        position: relative;
+    }
+    
+    .steps-container::before {
+        content: '';
+        position: absolute;
+        top: 40px;
+        left: 10%;
+        right: 10%;
+        height: 2px;
+        background-color: #eee;
+        z-index: 0;
+    }
+    
+    .step {
+        text-align: center;
+        padding: 30px 25px;
+        border-radius: 15px;
+        background-color: white;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .step-number {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: #333;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin: 0 auto 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .step h3 {
+        font-size: 1.4rem;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .step p {
+        color: #666;
+        line-height: 1.5;
+    }
+    
+    /* Testimonials Section */
+    .testimonials-section {
+        padding: 100px 0;
+        background-color: #f9f9f9;
+        position: relative;
+    }
+    
+    .testimonials-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 40px;
+    }
+    
+    .testimonial {
+        background-color: white;
+        border-radius: 15px;
+        padding: 35px 30px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        transition: transform 0.3s ease;
+        position: relative;
+    }
+    
+    .testimonial::before {
+        content: """;
+        position: absolute;
+        top: 20px;
+        left: 25px;
+        font-size: 5rem;
+        color: #f0f0f0;
+        font-family: Georgia, serif;
+        line-height: 0;
+        z-index: 0;
+    }
+    
+    .testimonial:hover {
+        transform: translateY(-5px);
+    }
+    
+    .testimonial-content {
+        position: relative;
+        font-style: italic;
+        margin-bottom: 25px;
+        color: #555;
+        line-height: 1.7;
+        z-index: 1;
+    }
+    
+    .testimonial-author {
+        display: flex;
+        flex-direction: column;
+        border-top: 1px solid #eee;
+        padding-top: 15px;
+    }
+    
+    .author-name {
+        font-weight: bold;
+        margin: 0;
+        color: #333;
+        font-size: 1.1rem;
+    }
+    
+    .author-title {
+        color: #888;
+        margin: 5px 0 0;
+    }
+    
+    /* CTA Section */
+    .cta-section {
+        padding: 80px 0;
+        background-color: #333;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .cta-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(to right, #4CAF50, #2196F3, #9C27B0, #FF9800);
+    }
+    
+    .cta-content {
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .cta-content h2 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+    }
+    
+    .cta-content p {
+        font-size: 1.2rem;
+        margin-bottom: 30px;
+        opacity: 0.9;
+    }
+    
+    .cta-btn {
+        display: inline-block;
+        padding: 15px 40px;
+        background-color: white;
+        color: #333;
+        text-decoration: none;
+        border-radius: 50px;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+    
+    .cta-btn:hover {
+        background-color: #f0f0f0;
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Responsive Adjustments */
+    @media (max-width: 992px) {
+        .hero-section {
+            padding: 100px 0;
+        }
+        
+        .hero-content h1 {
+            font-size: 3rem;
+        }
+        
+        .steps-container::before {
+            display: none;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .hero-section {
+            padding: 80px 0;
+        }
+        
+        .hero-content h1 {
+            font-size: 2.5rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 2rem;
+        }
+        
+        .feature-item, .step, .testimonial {
+            padding: 25px 20px;
+        }
+        
+        .cta-content h2 {
+            font-size: 2rem;
+        }
+        
+        .cta-content p {
+            font-size: 1.1rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .hero-section {
+            padding: 60px 0;
+        }
+        
+        .hero-content h1 {
+            font-size: 2.2rem;
+        }
+        
+        .hero-btn, .cta-btn {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 12px 20px;
+        }
+        
+        .hero-cta {
+            flex-direction: column;
+            gap: 0;
+        }
+        
+        .features-grid, .steps-container, .testimonials-container {
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+        }
+        
+        .testimonial::before {
+            font-size: 4rem;
+        }
+        
+        .cta-section {
+            padding: 60px 0;
+        }
+    }
+</style>
+{% endblock %} 

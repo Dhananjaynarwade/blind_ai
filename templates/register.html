@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Blind Vision{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Register for Blind Vision</h2>
+    <form method="POST" action="{{ url_for('register') }}">
+        <div class="form-group">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" id="username" name="username" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" id="email" name="email" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <div class="password-input-container">
+                <input type="password" id="password" name="password" class="form-control" required>
+                <span class="password-toggle" onclick="togglePasswordVisibility('password')">
+                    <i class="fa-eye">👁️</i>
+                </span>
+            </div>
+        </div>
+        <button type="submit" class="btn">Register</button>
+    </form>
+    <div style="margin-top: 20px;">
+        <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+    </div>
+</div>
+{% endblock %} 

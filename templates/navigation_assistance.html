@@ -1,0 +1,481 @@
+{% extends "base.html" %}
+
+{% block title %}Navigation Assistance - Blind Vision{% endblock %}
+
+{% block content %}
+<div class="navigation-container">
+    <h2>Navigation Assistance</h2>
+    <p>This feature helps identify pathways, obstacles, and navigation cues to assist with indoor and outdoor movement.</p>
+    
+    <div class="camera-controls">
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="overlay" class="overlay-canvas"></canvas>
+            <div id="direction-indicator" class="direction-indicator">
+                <div class="arrow">⬆️</div>
+                <div class="distance">Scanning...</div>
+            </div>
+        </div>
+        
+        <div class="navigation-panel">
+            <div class="panel-header">
+                <h3>Navigation Information</h3>
+                <div class="status-badge" id="status-badge">Initializing...</div>
+            </div>
+            
+            <div class="navigation-info">
+                <div class="info-row">
+                    <span class="info-label">Current environment:</span>
+                    <span class="info-value" id="environment-type">Not detected</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Detected pathway:</span>
+                    <span class="info-value" id="pathway-type">Not detected</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Obstacles:</span>
+                    <span class="info-value" id="obstacles">None detected</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Safe direction:</span>
+                    <span class="info-value" id="safe-direction">Scanning...</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="button-row">
+            <button id="startButton" class="btn control-btn">Start Navigation</button>
+            <button id="stopButton" class="btn control-btn btn-danger" disabled>Stop</button>
+            <button id="speakButton" class="btn control-btn" disabled>
+                <span id="speakIcon">🔊</span> <span id="speakText">Enable Voice</span>
+            </button>
+        </div>
+    </div>
+    
+    <div class="alert-box" id="alert-box">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-message" id="alert-message"></div>
+    </div>
+    
+    <div class="instructions-panel">
+        <h3>Instructions</h3>
+        <ol>
+            <li>Click "Start Navigation" to activate your device's camera</li>
+            <li>Hold your phone at chest level, with the camera facing forward</li>
+            <li>Move slowly to allow the system to identify paths and obstacles</li>
+            <li>Listen for voice guidance or read the navigation information on screen</li>
+            <li>The system will detect pedestrian paths, staircases, doorways, and obstacles</li>
+            <li>Follow the direction indicator to navigate safely</li>
+        </ol>
+        
+        <div class="back-to-dashboard">
+            <a href="{{ url_for('dashboard') }}" class="btn">Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .navigation-container {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .camera-controls {
+        margin: 20px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .video-container {
+        width: 100%;
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        background-color: #333;
+        aspect-ratio: 16/9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    #video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+    
+    .overlay-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+    
+    .direction-indicator {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0,0,0,0.7);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 30px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .direction-indicator .arrow {
+        font-size: 24px;
+        margin-bottom: 5px;
+    }
+    
+    .direction-indicator .distance {
+        font-size: 14px;
+    }
+    
+    .button-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    
+    .control-btn {
+        flex: 1;
+        padding: 12px;
+        font-size: 16px;
+    }
+    
+    .btn-danger {
+        background-color: #dc3545;
+    }
+    
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+    
+    .instructions-panel {
+        margin-top: 30px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .instructions-panel ol {
+        margin-left: 20px;
+        line-height: 1.6;
+    }
+    
+    .back-to-dashboard {
+        margin-top: 20px;
+        text-align: center;
+    }
+    
+    .navigation-panel {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .status-badge {
+        background-color: #6c757d;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 14px;
+    }
+    
+    .navigation-info {
+        background-color: white;
+        border-radius: 4px;
+        padding: 15px;
+        border: 1px solid #ddd;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .info-row:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: bold;
+        color: #495057;
+    }
+    
+    .info-value {
+        color: #212529;
+    }
+    
+    .alert-box {
+        display: none;
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        display: flex;
+        align-items: center;
+        animation: fadeIn 0.5s;
+    }
+    
+    .alert-box.active {
+        display: flex;
+    }
+    
+    .alert-icon {
+        font-size: 24px;
+        margin-right: 15px;
+    }
+    
+    .alert-message {
+        flex: 1;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @media (max-width: 768px) {
+        .navigation-container {
+            margin: 10px;
+            padding: 15px;
+        }
+        
+        .button-row {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const video = document.getElementById('video');
+        const overlay = document.getElementById('overlay');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const speakButton = document.getElementById('speakButton');
+        const speakText = document.getElementById('speakText');
+        const speakIcon = document.getElementById('speakIcon');
+        const statusBadge = document.getElementById('status-badge');
+        const directionIndicator = document.getElementById('direction-indicator');
+        const environmentType = document.getElementById('environment-type');
+        const pathwayType = document.getElementById('pathway-type');
+        const obstacles = document.getElementById('obstacles');
+        const safeDirection = document.getElementById('safe-direction');
+        const alertBox = document.getElementById('alert-box');
+        const alertMessage = document.getElementById('alert-message');
+        
+        let stream = null;
+        let voiceEnabled = false;
+        let navigationInterval = null;
+        let isNavigating = false;
+        const synth = window.speechSynthesis;
+        
+        // Environment types for simulation
+        const environments = ['Indoor', 'Outdoor', 'Building Entrance', 'Hallway', 'Room'];
+        const pathways = ['Sidewalk', 'Corridor', 'Doorway', 'Staircase', 'Elevator', 'Crosswalk', 'Ramp', 'Flat Surface'];
+        const obstacleTypes = [
+            'None detected', 
+            'Person ahead', 
+            'Wall on right', 
+            'Chair on left',
+            'Staircase ahead',
+            'Doorway ahead',
+            'Traffic ahead',
+            'Multiple obstacles'
+        ];
+        const directions = ['Straight ahead', 'Slight right', 'Slight left', 'Turn right', 'Turn left', 'Stop'];
+        const directionEmojis = {
+            'Straight ahead': '⬆️',
+            'Slight right': '↗️',
+            'Slight left': '↖️',
+            'Turn right': '➡️',
+            'Turn left': '⬅️',
+            'Stop': '⛔'
+        };
+        
+        // Start navigation
+        startButton.addEventListener('click', async function() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                video.srcObject = stream;
+                
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                speakButton.disabled = false;
+                statusBadge.textContent = 'Navigation Active';
+                statusBadge.style.backgroundColor = '#28a745';
+                directionIndicator.style.opacity = '1';
+                
+                // Start simulated navigation
+                simulateNavigation();
+                
+                // Hide alert box if visible
+                alertBox.style.display = 'none';
+            } catch (err) {
+                alertBox.style.display = 'flex';
+                alertMessage.textContent = 'Error accessing camera: ' + err.message;
+                console.error('Error accessing camera:', err);
+            }
+        });
+        
+        // Stop navigation
+        stopButton.addEventListener('click', function() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                speakButton.disabled = true;
+                statusBadge.textContent = 'Navigation Off';
+                statusBadge.style.backgroundColor = '#dc3545';
+                directionIndicator.style.opacity = '0';
+                
+                // Clear navigation interval
+                if (navigationInterval) {
+                    clearInterval(navigationInterval);
+                    navigationInterval = null;
+                }
+                
+                // Reset navigation info
+                environmentType.textContent = 'Not detected';
+                pathwayType.textContent = 'Not detected';
+                obstacles.textContent = 'None detected';
+                safeDirection.textContent = 'Scanning...';
+                
+                isNavigating = false;
+            }
+        });
+        
+        // Toggle voice
+        speakButton.addEventListener('click', function() {
+            voiceEnabled = !voiceEnabled;
+            if (voiceEnabled) {
+                speakText.textContent = 'Disable Voice';
+                speakIcon.textContent = '🔊';
+                speak('Voice navigation enabled');
+            } else {
+                speakText.textContent = 'Enable Voice';
+                speakIcon.textContent = '🔇';
+                
+                // Cancel any ongoing speech
+                if (synth.speaking) {
+                    synth.cancel();
+                }
+            }
+        });
+        
+        // Simulated navigation
+        function simulateNavigation() {
+            if (navigationInterval) {
+                clearInterval(navigationInterval);
+            }
+            
+            isNavigating = true;
+            
+            navigationInterval = setInterval(() => {
+                if (!isNavigating) return;
+                
+                // Update environment information
+                const currentEnvironment = environments[Math.floor(Math.random() * environments.length)];
+                const currentPathway = pathways[Math.floor(Math.random() * pathways.length)];
+                const currentObstacles = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+                const currentDirection = directions[Math.floor(Math.random() * directions.length)];
+                
+                // Update UI
+                environmentType.textContent = currentEnvironment;
+                pathwayType.textContent = currentPathway;
+                obstacles.textContent = currentObstacles;
+                safeDirection.textContent = currentDirection;
+                
+                // Update direction indicator
+                const directionArrow = document.querySelector('.direction-indicator .arrow');
+                directionArrow.textContent = directionEmojis[currentDirection] || '⬆️';
+                
+                // Calculate a fake distance
+                const distance = Math.floor(Math.random() * 10) + 1;
+                const distanceText = document.querySelector('.direction-indicator .distance');
+                distanceText.textContent = `${distance} ${distance === 1 ? 'meter' : 'meters'}`;
+                
+                // Speak if voice is enabled and there's an obstacle or direction change
+                if (voiceEnabled) {
+                    if (currentObstacles !== 'None detected') {
+                        speak(`${currentObstacles}. Recommended direction: ${currentDirection}`);
+                    } else if (Math.random() < 0.3) { // Occasionally give directional updates
+                        speak(`${currentDirection}, ${distance} ${distance === 1 ? 'meter' : 'meters'}`);
+                    }
+                }
+                
+                // Show alert for critical obstacles
+                if (currentObstacles.includes('ahead') || currentDirection === 'Stop') {
+                    alertBox.style.display = 'flex';
+                    alertMessage.textContent = `Warning: ${currentObstacles}. ${currentDirection}.`;
+                    
+                    // Speak alert with higher priority
+                    if (voiceEnabled) {
+                        speak(`Warning: ${currentObstacles}. ${currentDirection}.`, true);
+                    }
+                } else {
+                    alertBox.style.display = 'none';
+                }
+                
+            }, 4000); // Update every 4 seconds
+        }
+        
+        // Text-to-speech function
+        function speak(text, priority = false) {
+            if (!voiceEnabled) return;
+            
+            // Cancel previous speech if this is a priority message
+            if (priority && synth.speaking) {
+                synth.cancel();
+            } else if (synth.speaking) {
+                // If already speaking and not priority, don't interrupt
+                return;
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;  // Normal speed
+            utterance.pitch = 1.0; // Normal pitch
+            synth.speak(utterance);
+        }
+        
+        // Draw on canvas overlay (not implemented in this demo)
+        function drawPath() {
+            // This would be implemented with computer vision in a real app
+        }
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Blind Vision{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Welcome to Blind Vision Dashboard</h2>
+    <p>Hello, <strong>{{ current_user.username }}</strong>!</p>
+    
+    <div class="feature-section">
+        <h3>Available Features</h3>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">👁️</div>
+                <h4>Object Detection</h4>
+                <p>Identify objects in your surroundings using our advanced AI technology.</p>
+                <a href="{{ url_for('object_detection') }}" class="btn feature-btn">Launch</a>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📖</div>
+                <h4>Text Recognition</h4>
+                <p>Convert printed text to speech with our text recognition technology.</p>
+                <button class="btn feature-btn" disabled>Coming Soon</button>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <h4>Color Detection</h4>
+                <p>Identify colors in your environment with audio feedback.</p>
+                <a href="{{ url_for('color_detection') }}" class="btn feature-btn">Launch</a>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🧭</div>
+                <h4>Navigation Assistance</h4>
+                <p>Get guidance for indoor and outdoor navigation.</p>
+                <a href="{{ url_for('navigation_assistance') }}" class="btn feature-btn">Launch</a>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📷</div>
+                <h4>Camera Access</h4>
+                <p>Test your camera access for various vision features.</p>
+                <a href="{{ url_for('camera') }}" class="btn feature-btn">Launch</a>
+            </div>
+            <div class="feature-card highlight-card">
+                <div class="feature-icon">📚</div>
+                <h4>Storytelling</h4>
+                <p>Experience your environment through a comprehensive narrative combining all features.</p>
+                <a href="{{ url_for('storytelling') }}" class="btn feature-btn storytelling-btn">Launch</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="logout-section">
+        <a href="{{ url_for('logout') }}" class="btn btn-logout">Logout</a>
+    </div>
+</div>
+
+<style>
+    .feature-section {
+        margin-top: 30px;
+    }
+    
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .feature-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .highlight-card {
+        background-color: #e8f4ff;
+        border: 2px solid #007bff;
+    }
+    
+    .feature-icon {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+    
+    .feature-btn {
+        margin-top: 10px;
+        background-color: #28a745;
+    }
+    
+    .feature-btn:hover:not([disabled]) {
+        background-color: #218838;
+    }
+    
+    .feature-btn[disabled] {
+        background-color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.65;
+    }
+    
+    .storytelling-btn {
+        background-color: #007bff;
+    }
+    
+    .storytelling-btn:hover {
+        background-color: #0056b3;
+    }
+    
+    .btn-logout {
+        background-color: #dc3545;
+        margin-top: 30px;
+    }
+    
+    .btn-logout:hover {
+        background-color: #c82333;
+    }
+    
+    .logout-section {
+        margin-top: 30px;
+        text-align: center;
+    }
+</style>
+{% endblock %} 

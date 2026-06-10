@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Object Detection - Blind Vision{% endblock %}
+
+{% block content %}
+<div class="object-detection-container">
+    <h2>Object Detection</h2>
+    <p>Use your phone's camera to detect objects around you. Point your camera at objects to identify pedestrians, vehicles, staircases, doorways, and more.</p>
+    
+    <div class="camera-controls">
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas" style="display: none;"></canvas>
+        </div>
+        
+        <div class="detection-output">
+            <div class="output-header">
+                <h3>Detected Objects</h3>
+                <div class="status-badge" id="status-badge">Initializing...</div>
+            </div>
+            <div id="detection-results" class="results-container">
+                <div class="placeholder-text">Objects will appear here when detected.</div>
+            </div>
+        </div>
+        
+        <div class="button-row">
+            <button id="startButton" class="btn control-btn">Start Camera</button>
+            <button id="stopButton" class="btn control-btn btn-danger" disabled>Stop Camera</button>
+            <button id="speakButton" class="btn control-btn" disabled>
+                <span id="speakIcon">🔊</span> <span id="speakText">Enable Voice</span>
+            </button>
+        </div>
+    </div>
+    
+    <div class="instructions-panel">
+        <h3>Instructions</h3>
+        <ol>
+            <li>Click "Start Camera" to activate your device's camera</li>
+            <li>Point your camera at various objects around you</li>
+            <li>The system will identify common objects such as pedestrians, vehicles, staircases, and doorways</li>
+            <li>Enable voice mode to hear descriptions of detected objects</li>
+            <li>For navigation assistance, use slow, steady movements for best results</li>
+        </ol>
+        
+        <div class="back-to-dashboard">
+            <a href="{{ url_for('dashboard') }}" class="btn">Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .object-detection-container {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .camera-controls {
+        margin: 20px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .video-container {
+        width: 100%;
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        background-color: #333;
+        aspect-ratio: 16/9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    #video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+    
+    .button-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    
+    .control-btn {
+        flex: 1;
+        padding: 12px;
+        font-size: 16px;
+    }
+    
+    .btn-danger {
+        background-color: #dc3545;
+    }
+    
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+    
+    .instructions-panel {
+        margin-top: 30px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .instructions-panel ol {
+        margin-left: 20px;
+        line-height: 1.6;
+    }
+    
+    .back-to-dashboard {
+        margin-top: 20px;
+        text-align: center;
+    }
+    
+    .detection-output {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        min-height: 150px;
+    }
+    
+    .output-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .status-badge {
+        background-color: #6c757d;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 14px;
+    }
+    
+    .results-container {
+        min-height: 100px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+        background-color: white;
+    }
+    
+    .object-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        animation: fadeIn 0.5s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    .placeholder-text {
+        color: #6c757d;
+        text-align: center;
+        padding: 30px 0;
+    }
+    
+    @media (max-width: 768px) {
+        .object-detection-container {
+            margin: 10px;
+            padding: 15px;
+        }
+        
+        .button-row {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const speakButton = document.getElementById('speakButton');
+        const speakText = document.getElementById('speakText');
+        const speakIcon = document.getElementById('speakIcon');
+        const statusBadge = document.getElementById('status-badge');
+        const detectionResults = document.getElementById('detection-results');
+        
+        let stream = null;
+        let voiceEnabled = false;
+        let detectionInterval = null;
+        const synth = window.speechSynthesis;
+        
+        // Sample objects for simulation
+        const sampleObjects = [
+            'pedestrian', 'vehicle', 'staircase', 'doorway', 
+            'chair', 'table', 'bicycle', 'stoplight', 'sidewalk', 
+            'crosswalk', 'bench', 'building entrance', 'ramp'
+        ];
+        
+        // Start camera
+        startButton.addEventListener('click', async function() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                video.srcObject = stream;
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                speakButton.disabled = false;
+                statusBadge.textContent = 'Camera Active';
+                statusBadge.style.backgroundColor = '#28a745';
+                
+                // Start simulation of object detection
+                simulateObjectDetection();
+            } catch (err) {
+                alert('Error accessing camera: ' + err.message);
+                console.error('Error accessing camera:', err);
+            }
+        });
+        
+        // Stop camera
+        stopButton.addEventListener('click', function() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                speakButton.disabled = true;
+                statusBadge.textContent = 'Camera Off';
+                statusBadge.style.backgroundColor = '#dc3545';
+                
+                // Clear detection interval
+                if (detectionInterval) {
+                    clearInterval(detectionInterval);
+                    detectionInterval = null;
+                }
+                
+                // Clear results
+                detectionResults.innerHTML = '<div class="placeholder-text">Objects will appear here when detected.</div>';
+            }
+        });
+        
+        // Toggle voice
+        speakButton.addEventListener('click', function() {
+            voiceEnabled = !voiceEnabled;
+            if (voiceEnabled) {
+                speakText.textContent = 'Disable Voice';
+                speakIcon.textContent = '🔊';
+                speak('Voice feedback enabled');
+            } else {
+                speakText.textContent = 'Enable Voice';
+                speakIcon.textContent = '🔇';
+                
+                // Cancel any ongoing speech
+                if (synth.speaking) {
+                    synth.cancel();
+                }
+            }
+        });
+        
+        // Simulated object detection
+        function simulateObjectDetection() {
+            if (detectionInterval) {
+                clearInterval(detectionInterval);
+            }
+            
+            // Clear results
+            detectionResults.innerHTML = '';
+            
+            detectionInterval = setInterval(() => {
+                // Randomly select if we should detect an object (70% chance)
+                if (Math.random() < 0.7) {
+                    // Select a random object from our sample list
+                    const randomObject = sampleObjects[Math.floor(Math.random() * sampleObjects.length)];
+                    const confidence = (Math.random() * 30 + 70).toFixed(1); // 70-100%
+                    
+                    // Create and add the object to the results
+                    addDetectedObject(randomObject, confidence);
+                    
+                    // Speak the object if voice is enabled
+                    if (voiceEnabled) {
+                        speak(`Detected ${randomObject} with ${confidence} percent confidence`);
+                    }
+                }
+            }, 3000); // Detect objects every 3 seconds
+        }
+        
+        // Add a detected object to the results area
+        function addDetectedObject(name, confidence) {
+            // Remove placeholder if present
+            const placeholder = detectionResults.querySelector('.placeholder-text');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
+            // Create object item
+            const objectItem = document.createElement('div');
+            objectItem.className = 'object-item';
+            objectItem.innerHTML = `
+                <span>${name}</span>
+                <span>${confidence}% confidence</span>
+            `;
+            
+            // Add to results and limit to 5 items
+            detectionResults.prepend(objectItem);
+            
+            // Remove old items if we have more than 5
+            const items = detectionResults.querySelectorAll('.object-item');
+            if (items.length > 5) {
+                for (let i = 5; i < items.length; i++) {
+                    items[i].remove();
+                }
+            }
+        }
+        
+        // Text-to-speech function
+        function speak(text) {
+            if (!voiceEnabled) return;
+            
+            // Cancel any ongoing speech
+            if (synth.speaking) {
+                synth.cancel();
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            synth.speak(utterance);
+        }
+    });
+</script>
+{% endblock %} 

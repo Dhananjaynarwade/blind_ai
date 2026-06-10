@@ -1,0 +1,18 @@
+
+All users in database:
+======================
+ID: 1
+Username: dhananjay
+Email: dhananjaynarwade1998@gmail.com
+Verified: True
+----------------------
+ID: 2
+Username: testuser
+Email: test@example.com
+Verified: True
+----------------------
+ID: 3
+Username: newuser
+Email: newuser@example.com
+Verified: True
+----------------------

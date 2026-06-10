@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}Services - Blind Vision{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="page-title">Our Services</h1>
+    
+    <p class="services-intro">
+        Blind Vision offers a range of advanced AI-powered services designed to enhance the independence 
+        and experience of individuals with visual impairments.
+    </p>
+    
+    <div class="services-grid">
+        <div class="service-card" id="object-detection">
+            <div class="service-icon">🔍</div>
+            <h2>Real-time Object Detection</h2>
+            <p>
+                Our advanced object detection technology identifies objects in your environment and provides 
+                audio feedback about what's around you. The system can detect and announce over 80 common 
+                objects and their approximate locations relative to you.
+            </p>
+            <h3>Key Features:</h3>
+            <ul>
+                <li>Real-time detection and audio feedback</li>
+                <li>Spatial awareness (left, right, front)</li>
+                <li>Photo capture with object highlighting</li>
+                <li>Video recording with detection overlays</li>
+                <li>Customizable voice settings</li>
+            </ul>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('object_detection') }}" class="service-btn">Access Feature</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="service-btn">Sign Up to Access</a>
+            {% endif %}
+        </div>
+        
+        <div class="service-card" id="navigation">
+            <div class="service-icon">🧭</div>
+            <h2>Navigation Assistance</h2>
+            <p>
+                Navigate indoor and outdoor environments with confidence using our specialized 
+                navigation system. Our technology helps you identify obstacles, determine safe paths, 
+                and navigate to specific destinations.
+            </p>
+            <h3>Key Features:</h3>
+            <ul>
+                <li>Obstacle detection and avoidance</li>
+                <li>Directional guidance and path suggestions</li>
+                <li>Voice command controls</li>
+                <li>Adaptive guidance based on environment</li>
+                <li>Real-time spatial mapping</li>
+            </ul>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('navigation_assistance') }}" class="service-btn">Access Feature</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="service-btn">Sign Up to Access</a>
+            {% endif %}
+        </div>
+        
+        <div class="service-card" id="storytelling">
+            <div class="service-icon">📝</div>
+            <h2>Environment Storytelling</h2>
+            <p>
+                Our storytelling feature goes beyond simple object detection to provide rich, 
+                descriptive accounts of your surroundings. Experience a detailed narrative of the 
+                environment, helping you form a mental image of the space around you.
+            </p>
+            <h3>Key Features:</h3>
+            <ul>
+                <li>Detailed scene descriptions</li>
+                <li>Contextual information about environments</li>
+                <li>Identification of multiple objects and their relationships</li>
+                <li>Photo capture with scene descriptions</li>
+                <li>Object memory and recall</li>
+            </ul>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('storytelling') }}" class="service-btn">Access Feature</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="service-btn">Sign Up to Access</a>
+            {% endif %}
+        </div>
+        
+        <div class="service-card" id="color-detection">
+            <div class="service-icon">🎨</div>
+            <h2>Color Detection</h2>
+            <p>
+                Identify colors with precision using our color detection technology. This feature 
+                is particularly helpful for matching clothing, identifying objects by color, or 
+                simply experiencing the visual aspects of your environment.
+            </p>
+            <h3>Key Features:</h3>
+            <ul>
+                <li>Accurate color identification</li>
+                <li>Detailed color descriptions</li>
+                <li>Color contrast analysis</li>
+                <li>Pattern recognition</li>
+                <li>Color combination suggestions</li>
+            </ul>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('color_detection') }}" class="service-btn">Access Feature</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="service-btn">Sign Up to Access</a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="service-info-section">
+        <h2>How Our Technology Works</h2>
+        <p>
+            Blind Vision utilizes advanced machine learning models and computer vision techniques to 
+            process real-time video from your device's camera. Our technology can identify objects, 
+            detect obstacles, interpret colors, and understand spatial relationships to provide 
+            meaningful information about your surroundings.
+        </p>
+        <p>
+            All processing is done securely, with privacy as a core principle. While some features 
+            may require an internet connection for enhanced capabilities, many core functions work 
+            offline for reliability in all situations.
+        </p>
+    </div>
+    
+    <div class="cta-section">
+        <h2>Start Your Journey with Blind Vision Today</h2>
+        <p>
+            Join thousands of users who are experiencing the world in new ways with our 
+            cutting-edge assistive technology.
+        </p>
+        <div class="cta-buttons">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('dashboard') }}" class="cta-btn main">Go to Dashboard</a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="cta-btn main">Sign Up Now</a>
+                <a href="{{ url_for('login') }}" class="cta-btn secondary">Login</a>
+            {% endif %}
+            <a href="{{ url_for('contact') }}" class="cta-btn secondary">Contact Support</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-title {
+        margin: 30px 0;
+        color: #333;
+        text-align: center;
+        font-size: 2.5rem;
+    }
+    
+    .services-intro {
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto 40px;
+        font-size: 1.1rem;
+        line-height: 1.6;
+    }
+    
+    .services-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+    
+    .service-card {
+        background-color: #fff;
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .service-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .service-icon {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
+    }
+    
+    .service-card h2 {
+        color: #333;
+        margin: 0 0 15px 0;
+        font-size: 1.8rem;
+    }
+    
+    .service-card h3 {
+        color: #555;
+        margin: 20px 0 10px;
+        font-size: 1.3rem;
+    }
+    
+    .service-card p {
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+    
+    .service-card ul {
+        padding-left: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .service-card li {
+        margin-bottom: 8px;
+        color: #555;
+    }
+    
+    .service-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #333;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+    
+    .service-btn:hover {
+        background-color: #555;
+    }
+    
+    .service-info-section {
+        background-color: #f9f9f9;
+        padding: 40px;
+        border-radius: 10px;
+        margin-bottom: 40px;
+    }
+    
+    .service-info-section h2 {
+        color: #333;
+        margin-top: 0;
+        margin-bottom: 20px;
+    }
+    
+    .service-info-section p {
+        line-height: 1.6;
+        margin-bottom: 15px;
+    }
+    
+    .cta-section {
+        text-align: center;
+        padding: 40px;
+        background-color: #333;
+        color: white;
+        border-radius: 10px;
+    }
+    
+    .cta-section h2 {
+        margin-top: 0;
+        margin-bottom: 20px;
+    }
+    
+    .cta-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        flex-wrap: wrap;
+    }
+    
+    .cta-btn {
+        padding: 12px 25px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    
+    .cta-btn.main {
+        background-color: #fff;
+        color: #333;
+    }
+    
+    .cta-btn.main:hover {
+        background-color: #eee;
+    }
+    
+    .cta-btn.secondary {
+        background-color: transparent;
+        color: white;
+        border: 2px solid white;
+    }
+    
+    .cta-btn.secondary:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    @media (max-width: 768px) {
+        .services-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .cta-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .cta-btn {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+    }
+</style>
+{% endblock %} 

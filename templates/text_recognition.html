@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Recognition - Blind Vision</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="heading-container">
+            <h1 class="text-center">Text Recognition</h1>
+        </div>
+
+        <div class="recognition-panel">
+            <div class="instructions">
+                <p><strong>Instructions:</strong> Use this tool to convert text in images to speech. You can take a photo with your camera or upload an image.</p>
+                <p>Point your camera at text (books, signs, labels) and click "Capture Photo" to analyze the text.</p>
+                <p>For best results, ensure good lighting and hold the camera steady.</p>
+                <p><small>Camera will start automatically. If it doesn't, click the "Start Camera" button below.</small></p>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="video-container">
+                        <video id="video" autoplay playsinline></video>
+                        <div id="camera-loading" class="camera-loading">
+                            <div class="spinner"></div>
+                            <p>Starting camera...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="capture-buttons">
+                        <button id="capturePhoto" class="capture-btn photo-btn" disabled>
+                            <i class="fas fa-camera"></i> Capture Photo
+                        </button>
+                        
+                        <button id="startCamera" class="capture-btn photo-btn">
+                            <i class="fas fa-video"></i> Start Camera
+                        </button>
+                        
+                        <button id="stopCamera" class="capture-btn stop-camera-btn" disabled>
+                            <i class="fas fa-video-slash"></i> Stop Camera
+                        </button>
+                        
+                        <button id="uploadImage" class="capture-btn upload-btn">
+                            <i class="fas fa-upload"></i> Upload Image
+                        </button>
+                        <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                        <button id="clearResults" class="btn btn-outline-danger ml-auto" style="display: none;">
+                            <i class="fas fa-trash"></i> Clear Results
+                        </button>
+                    </div>
+                    
+                    <div class="diagnostics-toggle">
+                        <label for="diagnosticMode">
+                            <input type="checkbox" id="diagnosticMode"> Show diagnostic info
+                        </label>
+                    </div>
+                    
+                    <div id="loading-spinner" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Processing...</span>
+                        </div>
+                        <p>Analyzing text in image... This may take a few moments.</p>
+                        <p>For best results, ensure the text is clearly visible and well-lit.</p>
+                    </div>
+                    
+                    <div id="results-container"></div>
+                    
+                    <div id="diagnostics-info" class="diagnostics-info"></div>
+                    
+                    <div class="mt-3">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        #video {
+            width: 100%;
+            max-width: 640px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            min-height: 320px;
+        }
+        .alert {
+            margin-top: 15px;
+        }
+        .video-container {
+            position: relative;
+            display: block;
+            max-width: 640px;
+            margin: 0 auto;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .capture-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .capture-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            color: white;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .capture-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .capture-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .photo-btn {
+            background-color: #28a745;
+        }
+        
+        .photo-btn:hover:not(:disabled) {
+            background-color: #218838;
+        }
+        
+        .captured-item {
+            margin-top: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        .captured-img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            max-height: 300px; /* Limit the height */
+        }
+        .capture-info {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .recognition-result {
+            margin-top: 15px;
+            padding: 15px;
+            border: 1px solid #4caf50;
+            border-radius: 5px;
+            background-color: #f1f8e9;
+        }
+        .confidence-meter {
+            height: 10px;
+            margin: 10px 0;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .confidence-bar {
+            height: 100%;
+            background-color: #4caf50;
+            transition: width 0.3s ease;
+        }
+        .speak-btn {
+            margin-top: 10px;
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .speak-btn:hover:not(:disabled) {
+            background-color: #0d8bf2;
+        }
+        .instructions {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            text-align: center;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .highlighted-text {
+            background-color: #ffeb3b;
+            padding: 2px;
+            border-radius: 3px;
+        }
+        #loading-spinner {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #e9f7fe;
+            border-radius: 5px;
+            border: 1px solid #b8e3fd;
+        }
+        
+        #loading-spinner p {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #0069d9;
+        }
+        .upload-btn {
+            background-color: #007bff;
+        }
+        .upload-btn:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        .well-recognized-text {
+            background-color: rgba(40, 167, 69, 0.2);
+            border: 2px solid #28a745;
+            border-radius: 5px;
+            padding: 15px;
+            color: #212529;
+            font-weight: bold;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .well-recognized-text::before {
+            content: "Well Recognized";
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background-color: #28a745;
+            color: white;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        #clearResults {
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #clearResults:focus {
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.5);
+        }
+        .fa-trash {
+            font-size: 16px;
+        }
+        .speech-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .speech-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .speech-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .stop-btn {
+            background-color: #f44336;
+        }
+        .stop-btn:hover:not(:disabled) {
+            background-color: #d32f2f;
+        }
+        .btn-outline-primary {
+            color: #007bff;
+            border-color: #007bff;
+            background-color: transparent;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            transform: translateY(-2px);
+        }
+        .btn-outline-danger {
+            color: #dc3545;
+            border-color: #dc3545;
+            background-color: transparent;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .image-container {
+            text-align: center;
+            margin-bottom: 10px;
+            max-width: 400px; /* Limit container width */
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .diagnostics-toggle {
+            margin-top: 15px;
+            margin-bottom: 15px;
+            padding: 5px;
+            color: #6c757d;
+            text-align: center;
+        }
+        
+        .diagnostics-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .processing-details {
+            padding: 5px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #007bff;
+            margin-bottom: 10px;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        .mt-3 {
+            margin-top: 15px !important;
+            text-align: center;
+        }
+        .recognition-panel {
+            max-width: 900px;
+            margin: 0 auto 30px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .my-4 {
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .text-center {
+            text-align: center;
+            display: block;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #003d20;
+            font-weight: 600;
+            margin-bottom: 25px;
+            position: relative;
+            display: inline-block;
+            padding: 0 15px;
+        }
+        
+        h1:after {
+            content: "";
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: #0a5933;
+        }
+        .heading-container {
+            text-align: center;
+            margin: 30px 0;
+            width: 100%;
+        }
+        .camera-loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 5px;
+            z-index: 2;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .image-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .save-btn, .delete-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: bold;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .save-btn:hover, .delete-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .color-results {
+            display: none;
+        }
+        
+        .color-swatches, .color-swatch, .color-label, .color-palette, .palette-img, 
+        .annotated-image-container, .annotated-img, .color-detect-dropdown, .model-info {
+            display: none;
+        }
+    </style>
+
+        <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+        <script>
+            // JavaScript functionality for text recognition
+            document.addEventListener('DOMContentLoaded', function() {
+                const video = document.getElementById('video');
+                const startCameraBtn = document.getElementById('startCamera');
+                const capturePhotoBtn = document.getElementById('capturePhoto');
+                const uploadImageBtn = document.getElementById('uploadImage');
+                const imageUploadInput = document.getElementById('imageUpload');
+                const resultsContainer = document.getElementById('results-container');
+                const loadingSpinner = document.getElementById('loading-spinner');
+                const clearResultsBtn = document.getElementById('clearResults');
+                const diagnosticModeCheckbox = document.getElementById('diagnosticMode');
+                const diagnosticsInfo = document.getElementById('diagnostics-info');
+                const cameraLoading = document.getElementById('camera-loading');
+                const stopCameraBtn = document.getElementById('stopCamera');
+                
+                let stream = null;
+                let isDiagnosticMode = false;
+                
+                // Handle diagnostic mode toggle
+                diagnosticModeCheckbox.addEventListener('change', function() {
+                    isDiagnosticMode = this.checked;
+                    diagnosticsInfo.style.display = isDiagnosticMode ? 'block' : 'none';
+                });
+                
+                // Automatically start camera when page loads
+                startCamera();
+                
+                // Start camera function
+                async function startCamera() {
+                    try {
+                        // Show camera loading indicator
+                        cameraLoading.style.display = 'flex';
+                        
+                        // Use more specific constraints to help with compatibility
+                        const constraints = {
+                            video: {
+                                facingMode: 'environment',
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        };
+                        
+                        stream = await navigator.mediaDevices.getUserMedia(constraints);
+                        video.srcObject = stream;
+                        
+                        // Ensure video is fully initialized before enabling capture
+                        video.onloadedmetadata = function() {
+                            video.play();
+                            startCameraBtn.disabled = true;
+                            capturePhotoBtn.disabled = false;
+                            stopCameraBtn.disabled = false;  // Enable stop camera button
+                            
+                            // Hide camera loading indicator
+                            cameraLoading.style.display = 'none';
+                            
+                            console.log("Camera started automatically, video dimensions:", video.videoWidth, "x", video.videoHeight);
+                        };
+                    } catch (err) {
+                        console.error('Camera access error:', err);
+                        alert('Could not access camera: ' + err.message + '\nPlease click "Start Camera" button manually.');
+                        
+                        // Hide camera loading indicator
+                        cameraLoading.style.display = 'none';
+                        
+                        // Reset the button so user can try manually
+                        startCameraBtn.disabled = false;
+                        capturePhotoBtn.disabled = true;
+                        stopCameraBtn.disabled = true;
+                    }
+                }
+                
+                // Start camera button (now as a backup option)
+                startCameraBtn.addEventListener('click', startCamera);
+                
+                // Stop camera button
+                stopCameraBtn.addEventListener('click', function() {
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                        video.srcObject = null;
+                        stream = null;
+                        
+                        // Update button states
+                        startCameraBtn.disabled = false;
+                        capturePhotoBtn.disabled = true;
+                        stopCameraBtn.disabled = true;
+                        
+                        console.log("Camera stopped");
+                    }
+                });
+                
+                // Capture photo
+                capturePhotoBtn.addEventListener('click', function() {
+                    try {
+                        if (!video.videoWidth) {
+                            console.error('Video stream not initialized properly');
+                            alert('Cannot capture image: Video stream not ready. Please try restarting the camera.');
+                            return;
+                        }
+                        
+                        console.log("Attempting to capture photo from video stream");
+                        
+                        // Create canvas to capture frame
+                        const canvas = document.createElement('canvas');
+                        
+                        // Resize to a smaller resolution for better processing
+                        const maxWidth = 1024;  // Maximum width for the image
+                        const maxHeight = 768;  // Maximum height for the image
+                        let width = video.videoWidth;
+                        let height = video.videoHeight;
+                        
+                        console.log(`Original video dimensions: ${width}x${height}`);
+                        
+                        // Calculate new dimensions while maintaining aspect ratio
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height = Math.round(height * (maxWidth / width));
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width = Math.round(width * (maxHeight / height));
+                                height = maxHeight;
+                            }
+                        }
+                        
+                        console.log(`Resized dimensions for processing: ${width}x${height}`);
+                        
+                        // Set canvas dimensions to the new size
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        
+                        if (!ctx) {
+                            throw new Error("Failed to get canvas context");
+                        }
+                        
+                        // Draw the current video frame to the canvas with resizing
+                        ctx.drawImage(video, 0, 0, width, height);
+                        
+                        // Reduce JPEG quality for smaller file size
+                        const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                        
+                        if (!imageData || imageData === 'data:,') {
+                            throw new Error("Failed to capture image data from canvas");
+                        }
+                        
+                        console.log("Image captured successfully, size:", Math.round(imageData.length / 1024), "KB");
+                        
+                        // Process the image
+                        processImage(imageData);
+                    } catch (err) {
+                        console.error('Error capturing image:', err);
+                        alert('Failed to capture image: ' + err.message + '\nTry refreshing the page or using a different browser.');
+                    }
+                });
+                
+                // Image upload
+                uploadImageBtn.addEventListener('click', function() {
+                    imageUploadInput.click();
+                });
+                
+                imageUploadInput.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            processImage(e.target.result);
+                        };
+                        reader.readAsDataURL(this.files[0]);
+                    }
+                });
+                
+                // Process image for text recognition
+                function processImage(imageData) {
+                    // Show loading spinner
+                    loadingSpinner.style.display = 'block';
+                    clearResultsBtn.style.display = 'inline-flex';
+                    
+                    // Log image data length for debugging - adding more detailed logging
+                    const imageSize = Math.round(imageData.length / 1024);
+                    console.log(`Processing image: size ${imageSize}KB, format: ${imageData.substring(0, 30)}...`);
+                    
+                    // Create preview of captured image
+                    const previewContainer = document.createElement('div');
+                    previewContainer.className = 'captured-item';
+                    previewContainer.innerHTML = `
+                        <h4>Captured Image</h4>
+                        <div class="image-container">
+                            <img src="${imageData}" class="captured-img" alt="Captured image" id="capturedImg">
+                        </div>
+                        <div class="image-actions">
+                            <button class="btn btn-success save-btn">
+                                <i class="fas fa-save"></i> Save Image
+                            </button>
+                            <button class="btn btn-danger delete-btn">
+                                <i class="fas fa-trash"></i> Delete Image
+                            </button>
+                        </div>
+                    `;
+                    
+                    // Add to results
+                    resultsContainer.innerHTML = '';
+                    resultsContainer.appendChild(previewContainer);
+                    
+                    // Add event listeners for new buttons
+                    const saveBtn = previewContainer.querySelector('.save-btn');
+                    const deleteBtn = previewContainer.querySelector('.delete-btn');
+                    
+                    // Save button functionality
+                    saveBtn.addEventListener('click', function() {
+                        // Create a temporary link element
+                        const a = document.createElement('a');
+                        a.href = imageData;
+                        a.download = 'captured-image.jpg';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    });
+                    
+                    // Delete button functionality
+                    deleteBtn.addEventListener('click', function() {
+                        previewContainer.remove();
+                        // If there are no results left, hide the clear results button
+                        if (resultsContainer.children.length === 0) {
+                            clearResultsBtn.style.display = 'none';
+                            // Also clear diagnostics
+                            diagnosticsInfo.textContent = '';
+                            diagnosticsInfo.style.display = 'none';
+                        }
+                    });
+                    
+                    // Log image data length for debugging
+                    console.log("Sending image data, length:", imageData.length);
+                    
+                    // Add a status indicator
+                    const processingStatus = document.createElement('div');
+                    processingStatus.className = 'alert alert-info';
+                    processingStatus.innerHTML = '<i class="fas fa-info-circle"></i> Sending image for text recognition...';
+                    previewContainer.appendChild(processingStatus);
+
+                    try {
+                        // Send to backend for processing
+                        fetch('/text-recognition', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ 
+                                image_data: imageData,
+                                use_enhanced: true
+                            })
+                        })
+                        .then(response => {
+                            console.log(`Text recognition response status: ${response.status}`);
+                            if (!response.ok) {
+                                throw new Error(`Server responded with status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            // Hide loading spinner
+                            loadingSpinner.style.display = 'none';
+                            
+                            // Remove status indicator
+                            if (processingStatus.parentNode) {
+                                processingStatus.remove();
+                            }
+                            
+                            console.log("Text recognition results:", data);
+                            
+                            // Show diagnostic info if enabled
+                            if (isDiagnosticMode) {
+                                diagnosticsInfo.textContent = JSON.stringify(data, null, 2);
+                                diagnosticsInfo.style.display = 'block';
+                            }
+                            
+                            if (data.error) {
+                                showError(data.error);
+                                return;
+                            }
+                            
+                            // Display results
+                            displayTextResults(data);
+                        })
+                        .catch(error => {
+                            console.error('Text recognition error:', error);
+                            loadingSpinner.style.display = 'none';
+                            
+                            // Remove status indicator
+                            if (processingStatus.parentNode) {
+                                processingStatus.remove();
+                            }
+                            
+                            // Check if the error is related to Tesseract installation
+                            if (error.message && error.message.includes('<!doctype')) {
+                                showError('Server error: It appears Tesseract OCR may not be properly installed. Please check the console for more details.');
+                            } else {
+                                showError('Failed to process image: ' + error.message);
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Failed to send request:', error);
+                        loadingSpinner.style.display = 'none';
+                        
+                        // Remove status indicator
+                        if (processingStatus.parentNode) {
+                            processingStatus.remove();
+                        }
+                        
+                        showError('Failed to send request: ' + error.message);
+                    }
+                }
+                
+                // Display text recognition results
+                function displayTextResults(data) {
+                    console.log("Displaying text results:", data);
+                    
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'recognition-result';
+                    
+                    // Check if text was found
+                    if (!data.text || data.text.trim() === '') {
+                        resultDiv.innerHTML = `
+                            <h4>Text Recognition Results</h4>
+                            <p class="text-muted">No text detected in the image. Try again with a clearer image or different angle.</p>
+                        `;
+                        resultsContainer.appendChild(resultDiv);
+                        return;
+                    }
+                    
+                    // Display confidence
+                    const confidence = data.confidence || 0.7;
+                    // Ensure confidence is between 0-100%
+                    const confidencePercent = Math.min(Math.round(confidence * 100), 100);
+                    const confidenceClass = confidencePercent > 75 ? 'text-success' : 
+                                          confidencePercent > 50 ? 'text-warning' : 'text-danger';
+                    
+                    // Build the result HTML with additional details
+                    let processingDetails = '';
+                    
+                    if (data.config_used || data.preprocessing_used) {
+                        processingDetails = `
+                            <div class="processing-details">
+                                <p><small>Processing: ${data.preprocessing_used || 'standard'} | 
+                                Method: ${data.config_used || 'default'} | 
+                                Size: ${data.image_size || 'unknown'}</small></p>
+                            </div>
+                        `;
+                    }
+                    
+                    resultDiv.innerHTML = `
+                        <h4>Text Recognition Results</h4>
+                        <div class="confidence-section">
+                            <p>Confidence: <span class="${confidenceClass}">${confidencePercent}%</span></p>
+                            <div class="confidence-meter">
+                                <div class="confidence-bar" style="width: ${confidencePercent}%"></div>
+                            </div>
+                        </div>
+                        ${processingDetails}
+                        <div class="${confidencePercent > 75 ? 'well-recognized-text' : ''}">
+                            <p>${data.text}</p>
+                        </div>
+                        <div class="speech-controls">
+                            <button class="speech-btn speak-btn" id="speak-btn">
+                                <i class="fas fa-volume-up"></i> Speak Text
+                            </button>
+                            <button class="speech-btn stop-btn" id="stop-btn" disabled>
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                        </div>
+                    `;
+                    
+                    resultsContainer.appendChild(resultDiv);
+                    
+                    // Set up speech synthesis functionality
+                    setupSpeechControls(data.text);
+                }
+                
+                // Speech synthesis functionality
+                function setupSpeechControls(text) {
+                    const speakBtn = document.getElementById('speak-btn');
+                    const stopBtn = document.getElementById('stop-btn');
+                    
+                    if (!speakBtn) return;
+                    
+                    // Check if Speech Synthesis is supported
+                    if ('speechSynthesis' in window) {
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        
+                        speakBtn.addEventListener('click', function() {
+                // Cancel any ongoing speech
+                window.speechSynthesis.cancel();
+                
+                            // Speak the text
+                            window.speechSynthesis.speak(utterance);
+                            
+                            // Update buttons
+                            speakBtn.disabled = true;
+                            stopBtn.disabled = false;
+                        });
+                        
+                        stopBtn.addEventListener('click', function() {
+                window.speechSynthesis.cancel();
+                            speakBtn.disabled = false;
+                            stopBtn.disabled = true;
+                        });
+                        
+                        utterance.onend = function() {
+                            speakBtn.disabled = false;
+                            stopBtn.disabled = true;
+                        };
+                    } else {
+                        speakBtn.disabled = true;
+                        speakBtn.textContent = 'Speech not supported';
+                    }
+                }
+                
+                // Show error message
+                function showError(message) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'alert alert-danger';
+                    errorDiv.textContent = message;
+                    resultsContainer.appendChild(errorDiv);
+                }
+                
+                // Clear results
+                clearResultsBtn.addEventListener('click', function() {
+                    resultsContainer.innerHTML = '';
+                    clearResultsBtn.style.display = 'none';
+                    diagnosticsInfo.textContent = '';
+                    diagnosticsInfo.style.display = 'none';
+                    
+                    // Also cancel any ongoing speech
+                    if ('speechSynthesis' in window) {
+                        window.speechSynthesis.cancel();
+                    }
+                });
+                
+                // Clean up on page close
+                window.addEventListener('beforeunload', function() {
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                });
+            });
+    </script>
+</body>
+</html> 

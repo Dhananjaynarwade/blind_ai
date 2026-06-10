@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Object Detection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- TensorFlow.js libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #video {
+            width: 100%;
+            max-width: 640px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .alert {
+            margin-top: 15px;
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .video-container {
+            position: relative;
+            display: inline-block;
+        }
+        #detections {
+            margin-top: 15px;
+            font-size: 16px;
+        }
+        .capture-buttons {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .capture-btn {
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: none;
+            color: white;
+            font-weight: bold;
+        }
+        .photo-btn {
+            background-color: #28a745;
+        }
+        .photo-btn:hover {
+            background-color: #218838;
+        }
+        .video-btn {
+            background-color: #dc3545;
+        }
+        .video-btn:hover {
+            background-color: #c82333;
+        }
+        .video-btn.recording {
+            animation: pulse 1.5s infinite;
+        }
+        .captured-item {
+            margin-top: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        .captured-img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+        .capture-info {
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        .save-btn {
+            margin-top: 5px;
+            margin-right: 5px;
+        }
+        .delete-btn {
+            margin-top: 5px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        #recordings {
+            margin-top: 20px;
+        }
+        .recording-item {
+            margin-bottom: 15px;
+        }
+        @keyframes pulse {
+            0% { background-color: #dc3545; }
+            50% { background-color: #ff6b6b; }
+            100% { background-color: #dc3545; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="my-4">Object Detection</h1>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="video-container">
+                    <video id="video" height="480" autoplay></video>
+                    <canvas id="canvas"></canvas>
+                </div>
+                <div class="capture-buttons">
+                    <button id="capturePhoto" class="capture-btn photo-btn">Capture Photo</button>
+                    <button id="recordVideo" class="capture-btn video-btn">Record Video</button>
+                </div>
+                <div id="detections" class="mt-3"></div>
+                <div id="loadingMessage" class="alert alert-info mt-3">Loading object detection model...</div>
+                <div id="errorMessage" class="alert alert-danger mt-3" style="display: none;"></div>
+                
+                <div id="capturedPhotos"></div>
+                <div id="recordings"></div>
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const errorMessage = document.getElementById('errorMessage');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const detectionsElement = document.getElementById('detections');
+        const capturePhotoBtn = document.getElementById('capturePhoto');
+        const recordVideoBtn = document.getElementById('recordVideo');
+        const capturedPhotosContainer = document.getElementById('capturedPhotos');
+        const recordingsContainer = document.getElementById('recordings');
+        
+        let model = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
+        let detectedObjects = [];
+
+        // Check if we're running on HTTPS or localhost
+        const isSecureContext = window.isSecureContext || 
+                               window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1';
+
+        // Add debugging information to console
+        console.log("Is secure context:", isSecureContext);
+        console.log("navigator.mediaDevices:", navigator.mediaDevices);
+
+        // Load the TensorFlow.js COCO-SSD model
+        async function loadModel() {
+            try {
+                model = await cocoSsd.load();
+                loadingMessage.style.display = 'none';
+                console.log("Model loaded successfully");
+                
+                // Enable capture buttons once model is loaded
+                capturePhotoBtn.disabled = false;
+                recordVideoBtn.disabled = false;
+            } catch (err) {
+                console.error("Error loading model:", err);
+                loadingMessage.style.display = 'none';
+                errorMessage.textContent = "Error loading object detection model: " + err.message;
+                errorMessage.style.display = "block";
+                
+                // Disable capture buttons if model fails to load
+                capturePhotoBtn.disabled = true;
+                recordVideoBtn.disabled = true;
+            }
+        }
+
+        // Detect objects in video stream
+        async function detectObjects() {
+            if (!model || !video.readyState) {
+                requestAnimationFrame(detectObjects);
+                return;
+            }
+
+            // Set canvas dimensions to match video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Detect objects
+            const predictions = await model.detect(video);
+            
+            // Store detected objects for use in captures
+            detectedObjects = predictions;
+            
+            // Clear previous drawings
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw bounding boxes and labels
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 4;
+            ctx.font = '18px Arial';
+            ctx.fillStyle = 'green';
+
+            detectionsElement.innerHTML = predictions.length ? 
+                `<strong>Detected objects:</strong>` : 
+                "No objects detected";
+            
+            // Display all predictions
+            predictions.forEach(prediction => {
+                // Draw bounding box
+                const [x, y, width, height] = prediction.bbox;
+                ctx.strokeRect(x, y, width, height);
+                
+                // Draw label background
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                ctx.fillRect(x, y - 30, width, 30);
+                
+                // Draw label text
+                ctx.fillStyle = 'white';
+                ctx.fillText(
+                    `${prediction.class} ${Math.round(prediction.score * 100)}%`,
+                    x + 5, 
+                    y - 10
+                );
+                
+                // Add to detection list
+                detectionsElement.innerHTML += `<br>- ${prediction.class} (${Math.round(prediction.score * 100)}%)`;
+            });
+            
+            // Continue detection
+            requestAnimationFrame(detectObjects);
+        }
+
+        // Capture photo with detected objects
+        function capturePhoto() {
+            if (!video.readyState) {
+                alert("Camera not ready. Please wait a moment.");
+                return;
+            }
+            
+            // Create a temporary canvas for the capture
+            const photoCanvas = document.createElement('canvas');
+            photoCanvas.width = video.videoWidth;
+            photoCanvas.height = video.videoHeight;
+            const photoCtx = photoCanvas.getContext('2d');
+            
+            // Draw video frame
+            photoCtx.drawImage(video, 0, 0, photoCanvas.width, photoCanvas.height);
+            
+            // Draw detected objects
+            if (detectedObjects.length > 0) {
+                photoCtx.strokeStyle = 'green';
+                photoCtx.lineWidth = 4;
+                photoCtx.font = '18px Arial';
+                
+                detectedObjects.forEach(prediction => {
+                    const [x, y, width, height] = prediction.bbox;
+                    
+                    // Draw bounding box
+                    photoCtx.strokeRect(x, y, width, height);
+                    
+                    // Draw label background
+                    photoCtx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                    photoCtx.fillRect(x, y - 30, width, 30);
+                    
+                    // Draw label text
+                    photoCtx.fillStyle = 'white';
+                    photoCtx.fillText(
+                        `${prediction.class} ${Math.round(prediction.score * 100)}%`,
+                        x + 5, 
+                        y - 10
+                    );
+                });
+            }
+            
+            // Get image data as URL
+            const imageDataURL = photoCanvas.toDataURL('image/png');
+            
+            // Create photo element
+            const photoElement = document.createElement('div');
+            photoElement.className = 'captured-item';
+            
+            // Add timestamp
+            const timestamp = new Date().toLocaleString();
+            
+            // Create object list
+            const objectsList = detectedObjects.map(obj => 
+                `${obj.class} (${Math.round(obj.score * 100)}%)`
+            ).join(', ');
+            
+            photoElement.innerHTML = `
+                <img src="${imageDataURL}" class="captured-img" alt="Captured photo with objects">
+                <div class="capture-info">
+                    <strong>Timestamp:</strong> ${timestamp}<br>
+                    <strong>Detected:</strong> ${objectsList || 'No objects detected'}
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-success save-btn">Save Photo</button>
+                    <button class="btn btn-sm btn-danger delete-btn">Delete</button>
+                </div>
+            `;
+            
+            // Add save functionality
+            const saveBtn = photoElement.querySelector('.save-btn');
+            saveBtn.addEventListener('click', () => {
+                // Create a download link
+                const link = document.createElement('a');
+                link.href = imageDataURL;
+                link.download = `object-detection-${new Date().getTime()}.png`;
+                link.click();
+            });
+            
+            // Add delete functionality
+            const deleteBtn = photoElement.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', () => {
+                photoElement.remove();
+            });
+            
+            // Add to container
+            capturedPhotosContainer.prepend(photoElement);
+        }
+
+        // Toggle video recording
+        function toggleRecording() {
+            if (isRecording) {
+                // Stop recording
+                stopRecording();
+                recordVideoBtn.textContent = 'Record Video';
+                recordVideoBtn.classList.remove('recording');
+            } else {
+                // Start recording
+                startRecording();
+                recordVideoBtn.textContent = 'Stop Recording';
+                recordVideoBtn.classList.add('recording');
+            }
+            
+            isRecording = !isRecording;
+        }
+
+        // Start video recording
+        function startRecording() {
+            recordedChunks = [];
+            
+            // Create a canvas stream that includes the video and object detection
+            const recordingCanvas = document.createElement('canvas');
+            recordingCanvas.width = video.videoWidth;
+            recordingCanvas.height = video.videoHeight;
+            const recordingCtx = recordingCanvas.getContext('2d');
+            
+            // Get canvas stream
+            const canvasStream = recordingCanvas.captureStream(30); // 30 FPS
+            
+            // Create media recorder
+            mediaRecorder = new MediaRecorder(canvasStream, {
+                mimeType: 'video/webm;codecs=vp9'
+            });
+            
+            // Handle data available event
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+            
+            // Handle recording stop
+            mediaRecorder.onstop = saveRecording;
+            
+            // Start media recorder
+            mediaRecorder.start(100); // Collect 100ms chunks
+            
+            // Start drawing frames to the recording canvas
+            function drawFrame() {
+                if (!isRecording) return;
+                
+                // Draw video frame
+                recordingCtx.drawImage(video, 0, 0, recordingCanvas.width, recordingCanvas.height);
+                
+                // Draw detected objects
+                if (detectedObjects.length > 0) {
+                    recordingCtx.strokeStyle = 'green';
+                    recordingCtx.lineWidth = 4;
+                    recordingCtx.font = '18px Arial';
+                    
+                    detectedObjects.forEach(prediction => {
+                        const [x, y, width, height] = prediction.bbox;
+                        
+                        // Draw bounding box
+                        recordingCtx.strokeRect(x, y, width, height);
+                        
+                        // Draw label background
+                        recordingCtx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                        recordingCtx.fillRect(x, y - 30, width, 30);
+                        
+                        // Draw label text
+                        recordingCtx.fillStyle = 'white';
+                        recordingCtx.fillText(
+                            `${prediction.class} ${Math.round(prediction.score * 100)}%`,
+                            x + 5, 
+                            y - 10
+                        );
+                    });
+                }
+                
+                // Request next frame
+                if (isRecording) {
+                    requestAnimationFrame(drawFrame);
+                }
+            }
+            
+            // Start drawing frames
+            drawFrame();
+        }
+
+        // Stop video recording
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+        }
+
+        // Save the recorded video
+        function saveRecording() {
+            // Create a blob from the recorded chunks
+            const blob = new Blob(recordedChunks, {
+                type: 'video/webm'
+            });
+            
+            // Create a URL for the blob
+            const videoURL = URL.createObjectURL(blob);
+            
+            // Create video element
+            const videoElement = document.createElement('div');
+            videoElement.className = 'recording-item';
+            
+            // Add timestamp
+            const timestamp = new Date().toLocaleString();
+            
+            // Create object list
+            const objectsList = detectedObjects.map(obj => 
+                `${obj.class} (${Math.round(obj.score * 100)}%)`
+            ).join(', ');
+            
+            videoElement.innerHTML = `
+                <video controls class="w-100">
+                    <source src="${videoURL}" type="video/webm">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="capture-info">
+                    <strong>Timestamp:</strong> ${timestamp}<br>
+                    <strong>Detected:</strong> ${objectsList || 'No objects detected'}
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-danger save-btn">Save Video</button>
+                    <button class="btn btn-sm btn-warning delete-btn">Delete</button>
+                </div>
+            `;
+            
+            // Add save functionality
+            const saveBtn = videoElement.querySelector('.save-btn');
+            saveBtn.addEventListener('click', () => {
+                // Create a download link
+                const link = document.createElement('a');
+                link.href = videoURL;
+                link.download = `object-detection-${new Date().getTime()}.webm`;
+                link.click();
+            });
+            
+            // Add delete functionality
+            const deleteBtn = videoElement.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', () => {
+                // Release blob URL to free memory
+                URL.revokeObjectURL(videoURL);
+                // Remove element from DOM
+                videoElement.remove();
+            });
+            
+            // Add to container
+            recordingsContainer.prepend(videoElement);
+        }
+
+        // Initialize camera
+        if (!isSecureContext) {
+            errorMessage.textContent = "Camera access requires HTTPS unless on localhost. Please use a secure connection.";
+            errorMessage.style.display = "block";
+            
+            // Disable capture buttons
+            capturePhotoBtn.disabled = true;
+            recordVideoBtn.disabled = true;
+        } else if (navigator.mediaDevices?.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ 
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                }
+            })
+                .then(function (stream) {
+                    video.srcObject = stream;
+                    video.onloadeddata = () => {
+                        // Once video is loaded, load the model
+                        loadModel().then(() => {
+                            // Start object detection
+                            detectObjects();
+                        });
+                    };
+                })
+                .catch(function (err) {
+                    errorMessage.textContent = "Error accessing camera: " + err.message;
+                    errorMessage.style.display = "block";
+                    console.error("Error accessing camera:", err);
+                    
+                    // Disable capture buttons
+                    capturePhotoBtn.disabled = true;
+                    recordVideoBtn.disabled = true;
+                });
+        } else {
+            errorMessage.textContent = "getUserMedia not supported or navigator.mediaDevices is undefined.";
+            errorMessage.style.display = "block";
+            console.error("getUserMedia not supported or navigator.mediaDevices is undefined");
+            
+            // Disable capture buttons
+            capturePhotoBtn.disabled = true;
+            recordVideoBtn.disabled = true;
+        }
+        
+        // Add event listeners to buttons
+        capturePhotoBtn.addEventListener('click', capturePhoto);
+        recordVideoBtn.addEventListener('click', toggleRecording);
+    </script>
+</body>
+</html> 

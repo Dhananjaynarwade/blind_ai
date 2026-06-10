@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block title %}Contact Us - Blind Vision{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="page-title">Contact Us</h1>
+    
+    <div class="contact-container">
+        <div class="contact-info">
+            <h2>Get In Touch</h2>
+            <p>
+                We're here to help and answer any questions you might have about our services. 
+                Fill out the form and we'll get back to you as soon as possible.
+            </p>
+            
+            <div class="contact-methods">
+                <div class="contact-method">
+                    <div class="contact-icon">✉️</div>
+                    <div class="contact-detail">
+                        <h3>Email</h3>
+                        <p>dhananjaynarwade1998@gmail.com</p>
+                    </div>
+                </div>
+                
+                <div class="contact-method">
+                    <div class="contact-icon">📞</div>
+                    <div class="contact-detail">
+                        <h3>Phone</h3>
+                        <p>+1 (555) 123-4567</p>
+                    </div>
+                </div>
+                
+                <div class="contact-method">
+                    <div class="contact-icon">🏢</div>
+                    <div class="contact-detail">
+                        <h3>Office</h3>
+                        <p>123 Tech Plaza, Suite 456<br>San Francisco, CA 94105</p>
+                    </div>
+                </div>
+                
+                <div class="contact-method">
+                    <div class="contact-icon">⏰</div>
+                    <div class="contact-detail">
+                        <h3>Hours</h3>
+                        <p>Monday-Friday: 9am-5pm PST<br>Saturday-Sunday: Closed</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="social-links">
+                <h3>Connect With Us</h3>
+                <div class="social-icons">
+                    <a href="#" class="social-icon">📘</a> <!-- Facebook -->
+                    <a href="#" class="social-icon">📱</a> <!-- Twitter/X -->
+                    <a href="#" class="social-icon">📷</a> <!-- Instagram -->
+                    <a href="#" class="social-icon">📽️</a> <!-- YouTube -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="contact-form-container">
+            <h2>Send Us a Message</h2>
+            <form method="POST" action="{{ url_for('contact') }}" class="contact-form">
+                <div class="form-group">
+                    <label for="name" class="form-label">Name</label>
+                    <input type="text" id="name" name="name" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" id="email" name="email" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="subject" class="form-label">Subject</label>
+                    <select id="subject" name="subject" class="form-control">
+                        <option value="general">General Inquiry</option>
+                        <option value="support">Technical Support</option>
+                        <option value="feedback">Feedback</option>
+                        <option value="partnership">Partnership Opportunity</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="message" class="form-label">Message</label>
+                    <textarea id="message" name="message" class="form-control" rows="6" required></textarea>
+                </div>
+                
+                <button type="submit" class="submit-btn">Send Message</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+        
+        <div class="accordion">
+            <div class="accordion-item">
+                <div class="accordion-header">How does the object detection feature work?</div>
+                <div class="accordion-content">
+                    <p>Our object detection feature uses advanced computer vision and machine learning algorithms to identify objects in real-time through your device's camera. The system recognizes objects, determines their position relative to the user, and provides audio feedback about what's being detected.</p>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <div class="accordion-header">Is my data secure when using Blind Vision?</div>
+                <div class="accordion-content">
+                    <p>Yes, we take data security and privacy very seriously. All processing is done with strict privacy controls. While some features may use cloud processing for enhanced capabilities, we don't store your images or videos unless you explicitly choose to save them to your own account.</p>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <div class="accordion-header">Do I need an internet connection to use all features?</div>
+                <div class="accordion-content">
+                    <p>While an internet connection enhances some advanced features, many core functions of Blind Vision work offline. This ensures reliability in various situations, even when connectivity is limited.</p>
+                </div>
+            </div>
+            
+            <div class="accordion-item">
+                <div class="accordion-header">How can I provide feedback about the application?</div>
+                <div class="accordion-content">
+                    <p>We welcome your feedback! You can share your thoughts and suggestions through our contact form on this page, or by emailing us directly at dhananjaynarwade1998@gmail.com. Your input helps us improve our services.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-title {
+        margin: 30px 0;
+        color: #333;
+        text-align: center;
+        font-size: 2.5rem;
+    }
+    
+    .contact-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-bottom: 60px;
+    }
+    
+    .contact-info, 
+    .contact-form-container {
+        background-color: #fff;
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .contact-info h2,
+    .contact-form-container h2 {
+        color: #333;
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 1.8rem;
+    }
+    
+    .contact-methods {
+        margin-top: 30px;
+    }
+    
+    .contact-method {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 25px;
+    }
+    
+    .contact-icon {
+        font-size: 1.8rem;
+        margin-right: 15px;
+    }
+    
+    .contact-detail h3 {
+        margin: 0 0 5px 0;
+        color: #333;
+        font-size: 1.2rem;
+    }
+    
+    .contact-detail p {
+        margin: 0;
+        color: #666;
+        line-height: 1.5;
+    }
+    
+    .social-links {
+        margin-top: 30px;
+    }
+    
+    .social-links h3 {
+        margin-bottom: 15px;
+        color: #333;
+        font-size: 1.2rem;
+    }
+    
+    .social-icons {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .social-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background-color: #f4f4f4;
+        border-radius: 50%;
+        font-size: 1.5rem;
+        color: #333;
+        text-decoration: none;
+        transition: background-color 0.3s ease, transform 0.3s ease;
+    }
+    
+    .social-icon:hover {
+        background-color: #333;
+        color: white;
+        transform: scale(1.1);
+    }
+    
+    .contact-form {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #555;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #333;
+        outline: none;
+    }
+    
+    textarea.form-control {
+        resize: vertical;
+    }
+    
+    .submit-btn {
+        padding: 14px 20px;
+        background-color: #333;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .submit-btn:hover {
+        background-color: #555;
+    }
+    
+    .faq-section {
+        margin-top: 60px;
+        margin-bottom: 40px;
+    }
+    
+    .faq-section h2 {
+        text-align: center;
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+    }
+    
+    .accordion {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .accordion-item {
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    
+    .accordion-header {
+        padding: 15px 20px;
+        background-color: #f4f4f4;
+        color: #333;
+        font-weight: bold;
+        cursor: pointer;
+        position: relative;
+    }
+    
+    .accordion-header:after {
+        content: '+';
+        position: absolute;
+        right: 20px;
+        font-size: 1.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .accordion-item.active .accordion-header:after {
+        content: '-';
+    }
+    
+    .accordion-content {
+        padding: 0;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+    
+    .accordion-item.active .accordion-content {
+        padding: 20px;
+        max-height: 1000px;
+    }
+    
+    @media (max-width: 992px) {
+        .contact-container {
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+    }
+</style>
+
+<script>
+    // Wait for the DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get all accordion items
+        const accordionItems = document.querySelectorAll('.accordion-item');
+        
+        // Add click event listener to each accordion header
+        accordionItems.forEach(item => {
+            const header = item.querySelector('.accordion-header');
+            
+            header.addEventListener('click', function() {
+                // Toggle active class on the clicked item
+                item.classList.toggle('active');
+                
+                // Close all other items
+                accordionItems.forEach(otherItem => {
+                    if (otherItem !== item) {
+                        otherItem.classList.remove('active');
+                    }
+                });
+            });
+        });
+    });
+</script>
+{% endblock %} 

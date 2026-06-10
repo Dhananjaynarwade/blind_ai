@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blind Vision Simple Workflow</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #003d20;
+            text-align: center;
+        }
+        #diagram {
+            margin: 20px auto;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Blind Vision - Main Workflow</h1>
+        
+        <div id="diagram" class="mermaid">
+flowchart TD
+    A[User Access] --> B{User Registered?}
+    B -->|No| C[Register]
+    B -->|Yes| D{User Verified?}
+    C --> E[Email Verification]
+    E --> F[Login]
+    D -->|Yes| F
+    D -->|No| E
+    F --> G[Dashboard]
+    
+    G --> H[Object Detection]
+    G --> I[Text Recognition]
+    G --> J[Color Detection]
+    G --> K[Navigation Assistance]
+    
+    H & I & J & K --> L[AI Processing]
+    L --> M[Result Display]
+    M --> N[User Feedback]
+    N --> O[Adaptive Learning]
+    O --> L
+        </div>
+    </div>
+
+    <script>
+        // Initialize mermaid with a specific configuration
+        mermaid.initialize({
+            startOnLoad: true,
+            securityLevel: 'loose',
+            theme: 'default'
+        });
+    </script>
+</body>
+</html> 

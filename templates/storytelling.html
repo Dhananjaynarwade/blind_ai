@@ -1,0 +1,966 @@
+{% extends "base.html" %}
+
+{% block title %}Storytelling - Blind Vision{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Blind Vision Storytelling</h2>
+    <p>A comprehensive narrative experience combining all sensory assistance features.</p>
+
+    <div class="storytelling-container">
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <button id="startStory" class="btn action-btn">Start Storytelling</button>
+            <button id="pauseStory" class="btn action-btn" disabled>Pause</button>
+            <button id="resumeStory" class="btn action-btn" disabled>Resume</button>
+            <button id="stopStory" class="btn action-btn" disabled>Stop</button>
+            <button id="voiceCommand" class="btn voice-btn">Voice Command</button>
+        </div>
+
+        <div class="story-output">
+            <h3>Environment Narrative</h3>
+            <div id="storyText" class="story-text"></div>
+        </div>
+
+        <div id="voiceCommandStatus" class="voice-status" style="display: none;">
+            <p id="listeningText">Listening for commands...</p>
+            <p id="recognizedText" class="recognized-command"></p>
+        </div>
+
+        <div class="feature-toggles">
+            <h3>Active Features</h3>
+            <div class="toggle-group">
+                <label class="toggle">
+                    <input type="checkbox" id="objectDetection" checked>
+                    <span class="toggle-label">Object Detection</span>
+                </label>
+                <label class="toggle">
+                    <input type="checkbox" id="navigationAssistance" checked>
+                    <span class="toggle-label">Navigation Assistance</span>
+                </label>
+                <label class="toggle">
+                    <input type="checkbox" id="colorDetection" checked>
+                    <span class="toggle-label">Color Detection</span>
+                </label>
+                <label class="toggle">
+                    <input type="checkbox" id="showBoundingBoxes" checked>
+                    <span class="toggle-label">Show Bounding Boxes</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="back-section">
+        <a href="{{ url_for('dashboard') }}" class="btn back-btn">Back to Dashboard</a>
+    </div>
+</div>
+
+<style>
+    .storytelling-container {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .video-container {
+        width: 100%;
+        max-width: 640px;
+        margin: 0 auto 20px;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        position: relative;
+    }
+
+    #video {
+        width: 100%;
+        max-width: 640px;
+        height: auto;
+        background-color: #000;
+    }
+    
+    #canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+
+    .action-btn {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 10px 15px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .action-btn:hover:not(:disabled) {
+        background-color: #0056b3;
+    }
+
+    .action-btn:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.65;
+    }
+
+    #startStory {
+        background-color: #28a745;
+    }
+
+    #startStory:hover:not(:disabled) {
+        background-color: #218838;
+    }
+
+    #pauseStory, #resumeStory {
+        background-color: #ffc107;
+        color: #212529;
+    }
+
+    #pauseStory:hover:not(:disabled), #resumeStory:hover:not(:disabled) {
+        background-color: #e0a800;
+    }
+
+    #stopStory {
+        background-color: #dc3545;
+    }
+
+    #stopStory:hover:not(:disabled) {
+        background-color: #c82333;
+    }
+
+    .voice-btn {
+        background-color: #6610f2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 10px 15px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .voice-btn:hover {
+        background-color: #520dc2;
+    }
+
+    .voice-btn.active {
+        background-color: #d63384;
+    }
+
+    .voice-status {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+        text-align: center;
+    }
+
+    .recognized-command {
+        font-weight: bold;
+        color: #0d6efd;
+    }
+
+    .story-output {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .story-text {
+        min-height: 150px;
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 16px;
+        line-height: 1.5;
+    }
+
+    .feature-toggles {
+        margin-top: 20px;
+    }
+
+    .toggle-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 10px;
+    }
+
+    .toggle {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .toggle input {
+        margin-right: 8px;
+        width: 18px;
+        height: 18px;
+    }
+
+    .toggle-label {
+        font-size: 16px;
+    }
+
+    .back-section {
+        margin-top: 30px;
+        text-align: center;
+    }
+
+    .back-btn {
+        background-color: #6c757d;
+    }
+
+    .back-btn:hover {
+        background-color: #5a6268;
+    }
+
+    @media (max-width: 768px) {
+        .controls {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .action-btn {
+            width: 100%;
+            max-width: 200px;
+        }
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const storyText = document.getElementById('storyText');
+        
+        const startBtn = document.getElementById('startStory');
+        const pauseBtn = document.getElementById('pauseStory');
+        const resumeBtn = document.getElementById('resumeStory');
+        const stopBtn = document.getElementById('stopStory');
+        const voiceCommandBtn = document.getElementById('voiceCommand');
+        
+        const objectDetectionToggle = document.getElementById('objectDetection');
+        const navigationAssistanceToggle = document.getElementById('navigationAssistance');
+        const colorDetectionToggle = document.getElementById('colorDetection');
+        const showBoundingBoxesToggle = document.getElementById('showBoundingBoxes');
+        
+        let storyInterval;
+        let isCameraActive = false;
+        let isPaused = false;
+        let model = null;
+        let detectedObjects = [];
+        let navigationPath = null;
+        let currentEnvironment = 'indoor room';
+        let animationFrameId = null;
+        
+        // Environment types based on object detection
+        const environments = {
+            'indoor room': ['chair', 'sofa', 'tv', 'book', 'vase', 'potted plant'],
+            'kitchen': ['refrigerator', 'microwave', 'oven', 'sink', 'bowl', 'cup'],
+            'office': ['laptop', 'keyboard', 'cell phone', 'person', 'chair', 'desk'],
+            'bedroom': ['bed', 'clock', 'book'],
+            'bathroom': ['toilet', 'sink', 'bottle'],
+            'outdoor': ['car', 'bicycle', 'person', 'traffic light', 'tree'],
+            'street': ['car', 'truck', 'motorcycle', 'bicycle', 'traffic light'],
+            'store': ['bottle', 'person', 'backpack']
+        };
+        
+        // Navigation obstacles
+        const navigationObstacles = [
+            'chair', 'sofa', 'person', 'bicycle', 'car', 'motorcycle', 
+            'potted plant', 'bed', 'dining table', 'toilet', 'tv'
+        ];
+        
+        // Load COCO-SSD model
+        async function loadModel() {
+            try {
+                storyText.innerHTML = '<p>Loading object detection model...</p>';
+                model = await cocoSsd.load();
+                storyText.innerHTML += '<p>Model loaded successfully!</p>';
+                return true;
+            } catch (err) {
+                console.error('Error loading model:', err);
+                storyText.innerHTML += `<p class="error">Model loading error: ${err.message}. Using simulated data instead.</p>`;
+                return false;
+            }
+        }
+        
+        // Draw bounding boxes on canvas
+        function drawBoundingBoxes(objects) {
+            if (!showBoundingBoxesToggle.checked || !objects.length) return;
+            
+            // Clear the canvas
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw bounding boxes for each object
+            objects.forEach(obj => {
+                // Calculate actual pixel coordinates from normalized values
+                const x = obj.x * canvas.width - (obj.width * canvas.width / 2);
+                const y = obj.y * canvas.height - (obj.height * canvas.height / 2);
+                const width = obj.width * canvas.width;
+                const height = obj.height * canvas.height;
+                
+                // Set color based on object type (red for obstacles, green for others)
+                if (navigationObstacles.includes(obj.class)) {
+                    context.strokeStyle = 'red';
+                    context.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                } else if (obj.class === 'person') {
+                    context.strokeStyle = 'blue';
+                    context.fillStyle = 'rgba(0, 0, 255, 0.3)';
+                } else {
+                    context.strokeStyle = 'green';
+                    context.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                }
+                
+                // Line width based on confidence
+                context.lineWidth = 2 + (obj.score * 3); // 2-5px based on confidence
+                
+                // Draw rectangle
+                context.fillRect(x, y, width, height);
+                context.strokeRect(x, y, width, height);
+                
+                // Draw label
+                context.fillStyle = 'white';
+                context.font = '14px Arial';
+                context.fillRect(x, y - 20, width, 20);
+                
+                context.fillStyle = context.strokeStyle;
+                context.textAlign = 'center';
+                context.fillText(
+                    `${obj.class} ${Math.round(obj.score * 100)}%`,
+                    x + width/2, 
+                    y - 5
+                );
+            });
+        }
+        
+        // Detect objects in video frame
+        async function detectObjects() {
+            if (!model || !isCameraActive) return [];
+            
+            try {
+                // Draw the video frame to canvas for detection
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Run detection
+                const predictions = await model.detect(canvas);
+                detectedObjects = predictions.map(prediction => ({
+                    class: prediction.class,
+                    score: prediction.score,
+                    x: (prediction.bbox[0] + prediction.bbox[2]/2) / canvas.width,
+                    y: (prediction.bbox[1] + prediction.bbox[3]/2) / canvas.height,
+                    width: prediction.bbox[2] / canvas.width,
+                    height: prediction.bbox[3] / canvas.height,
+                    direction: getObjectDirection(prediction.bbox[0] + prediction.bbox[2]/2, canvas.width)
+                }));
+                
+                // Draw bounding boxes
+                if (showBoundingBoxesToggle.checked) {
+                    drawBoundingBoxes(detectedObjects);
+                }
+                
+                // Update navigation service with detected objects
+                if (navigationAssistanceToggle.checked) {
+                    try {
+                        fetch('/api/navigation/update_objects', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ objects: detectedObjects })
+                        });
+                    } catch (e) {
+                        console.error('Error updating navigation:', e);
+                    }
+                }
+                
+                return detectedObjects;
+            } catch (err) {
+                console.error('Detection error:', err);
+                return [];
+            }
+        }
+        
+        // Determine direction of object relative to user
+        function getObjectDirection(objectX, canvasWidth) {
+            const leftThreshold = canvasWidth * 0.33;
+            const rightThreshold = canvasWidth * 0.67;
+            
+            if (objectX < leftThreshold) {
+                return "left";
+            } else if (objectX > rightThreshold) {
+                return "right";
+            } else {
+                return "front";
+            }
+        }
+        
+        // Continuous detection loop
+        function startDetectionLoop() {
+            // Clear any existing animation frame
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            
+            // Detection loop
+            async function detect() {
+                if (isCameraActive && !isPaused) {
+                    await detectObjects();
+                }
+                animationFrameId = requestAnimationFrame(detect);
+            }
+            
+            detect();
+        }
+        
+        // Determine environment type based on detected objects
+        function determineEnvironment(objects) {
+            if (!objects || objects.length === 0) return currentEnvironment;
+            
+            const objectClasses = objects.map(obj => obj.class);
+            let bestMatch = null;
+            let highestScore = 0;
+            
+            for (const [envType, envObjects] of Object.entries(environments)) {
+                const matchCount = envObjects.filter(obj => objectClasses.includes(obj)).length;
+                const score = matchCount / envObjects.length;
+                
+                if (score > highestScore) {
+                    highestScore = score;
+                    bestMatch = envType;
+                }
+            }
+            
+            return highestScore > 0.2 ? bestMatch : currentEnvironment;
+        }
+        
+        // Generate a narrative about the environment based on real detected objects
+        async function generateNarrative() {
+            let narrative = '';
+            
+            // Detect objects if enabled
+            if (objectDetectionToggle.checked) {
+                const objects = detectedObjects; // Use already detected objects
+                
+                // Update current environment
+                if (objects.length > 0) {
+                    const newEnvironment = determineEnvironment(objects);
+                    if (newEnvironment !== currentEnvironment) {
+                        currentEnvironment = newEnvironment;
+                        narrative += `You have entered a ${currentEnvironment}. `;
+                    } else {
+                        narrative += `You are in a ${currentEnvironment}. `;
+                    }
+                } else {
+                    narrative += `You are in a ${currentEnvironment}. `;
+                }
+                
+                // Group objects by direction
+                const objectsByDirection = {
+                    front: [],
+                    left: [],
+                    right: []
+                };
+                
+                // Filter high-confidence objects and categorize by direction
+                objects.filter(obj => obj.score > 0.6).forEach(obj => {
+                    objectsByDirection[obj.direction].push(obj);
+                });
+                
+                // Describe objects by direction
+                if (objectsByDirection.front.length > 0) {
+                    const frontObjects = groupObjectsByClass(objectsByDirection.front);
+                    narrative += `In front of you: ${formatObjectList(frontObjects)}. `;
+                }
+                
+                if (objectsByDirection.left.length > 0) {
+                    const leftObjects = groupObjectsByClass(objectsByDirection.left);
+                    narrative += `To your left: ${formatObjectList(leftObjects)}. `;
+                }
+                
+                if (objectsByDirection.right.length > 0) {
+                    const rightObjects = groupObjectsByClass(objectsByDirection.right);
+                    narrative += `To your right: ${formatObjectList(rightObjects)}. `;
+                }
+                
+                // If no objects are detected in any direction
+                if (objects.length === 0) {
+                    narrative += "I don't see any specific objects at the moment. ";
+                }
+                
+                // Identify potential obstacles
+                const obstacles = objects.filter(obj => 
+                    navigationObstacles.includes(obj.class) && obj.score > 0.6
+                );
+                
+                if (obstacles.length > 0) {
+                    // Find closest obstacle
+                    const closestObstacle = obstacles.reduce((closest, current) => {
+                        // Calculate distance from bottom center of frame (rough estimation of user position)
+                        const currDistance = Math.sqrt(
+                            Math.pow(current.x - 0.5, 2) + 
+                            Math.pow(current.y - 1.0, 2)
+                        );
+                        
+                        const closestDistance = Math.sqrt(
+                            Math.pow(closest.x - 0.5, 2) + 
+                            Math.pow(closest.y - 1.0, 2)
+                        );
+                        
+                        return currDistance < closestDistance ? current : closest;
+                    }, obstacles[0]);
+                    
+                    // Determine position of obstacle
+                    narrative += `Warning: There is a ${closestObstacle.class} ${closestObstacle.direction === "front" ? "directly ahead" : "to your " + closestObstacle.direction}. `;
+                }
+            }
+            
+            // Add navigation assistance
+            if (navigationAssistanceToggle.checked) {
+                try {
+                    const response = await fetch('/api/navigation/status');
+                    const data = await response.json();
+                    
+                    if (data.success && data.guidance && data.guidance.directions && data.guidance.directions.length > 0) {
+                        narrative += `Navigation guidance: ${data.guidance.directions[0]} `;
+                    } else if (detectedObjects.length > 0) {
+                        // Simple guidance if no path is available
+                        const obstacles = detectedObjects.filter(obj => 
+                            navigationObstacles.includes(obj.class) && obj.score > 0.6
+                        );
+                        
+                        if (obstacles.length > 0) {
+                            // Count obstacles on left vs right
+                            const leftObstacles = obstacles.filter(obj => obj.direction === "left").length;
+                            const rightObstacles = obstacles.filter(obj => obj.direction === "right").length;
+                            const frontObstacles = obstacles.filter(obj => obj.direction === "front").length;
+                            
+                            // More sophisticated guidance based on obstacle distribution
+                            if (frontObstacles > 0) {
+                                if (leftObstacles < rightObstacles) {
+                                    narrative += "You should turn left to avoid obstacles. ";
+                                } else if (rightObstacles < leftObstacles) {
+                                    narrative += "You should turn right to avoid obstacles. ";
+                                } else {
+                                    narrative += "The path ahead has obstacles. Consider changing direction. ";
+                                }
+                            } else if (leftObstacles < rightObstacles) {
+                                narrative += "The path to your left seems clearer. ";
+                            } else if (rightObstacles < leftObstacles) {
+                                narrative += "The path to your right seems clearer. ";
+                            } else {
+                                narrative += "Proceed with caution, obstacles detected. ";
+                            }
+                        } else {
+                            narrative += "The path ahead appears clear. ";
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error getting navigation status:', err);
+                }
+            }
+            
+            // Add color detection
+            if (colorDetectionToggle.checked) {
+                // Get dominant color from image
+                try {
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const dominantColor = getDominantColor(imageData);
+                    narrative += `The dominant color around you is ${dominantColor}. `;
+                } catch (e) {
+                    console.error('Error in color detection:', e);
+                }
+            }
+            
+            return narrative;
+        }
+        
+        // Group objects by class and count them
+        function groupObjectsByClass(objects) {
+            const objectCounts = {};
+            objects.forEach(obj => {
+                objectCounts[obj.class] = (objectCounts[obj.class] || 0) + 1;
+            });
+            return objectCounts;
+        }
+        
+        // Format object list for narrative
+        function formatObjectList(objectCounts) {
+            const descriptions = [];
+            for (const [objClass, count] of Object.entries(objectCounts)) {
+                const objPhrase = count === 1 ? `a ${objClass}` : `${count} ${objClass}s`;
+                descriptions.push(objPhrase);
+            }
+            
+            if (descriptions.length === 0) {
+                return "nothing";
+            } else if (descriptions.length === 1) {
+                return descriptions[0];
+            } else if (descriptions.length === 2) {
+                return `${descriptions[0]} and ${descriptions[1]}`;
+            } else {
+                const lastObj = descriptions.pop();
+                return `${descriptions.join(', ')}, and ${lastObj}`;
+            }
+        }
+        
+        // Toggle bounding boxes
+        showBoundingBoxesToggle.addEventListener('change', function() {
+            if (this.checked) {
+                drawBoundingBoxes(detectedObjects);
+            } else {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        });
+        
+        // Simple function to detect dominant color
+        function getDominantColor(imageData) {
+            const data = imageData.data;
+            let colorCounts = {
+                red: 0,
+                green: 0,
+                blue: 0,
+                yellow: 0,
+                orange: 0,
+                purple: 0,
+                pink: 0,
+                brown: 0,
+                black: 0,
+                white: 0,
+                gray: 0
+            };
+            
+            // Sample pixels (every 20th pixel for performance)
+            for (let i = 0; i < data.length; i += 80) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                
+                // Simple color classification
+                if (r > 200 && g > 200 && b > 200) colorCounts.white++;
+                else if (r < 60 && g < 60 && b < 60) colorCounts.black++;
+                else if (Math.abs(r - g) < 30 && Math.abs(r - b) < 30) colorCounts.gray++;
+                else if (r > 200 && g < 100 && b < 100) colorCounts.red++;
+                else if (r < 100 && g > 200 && b < 100) colorCounts.green++;
+                else if (r < 100 && g < 100 && b > 200) colorCounts.blue++;
+                else if (r > 200 && g > 200 && b < 100) colorCounts.yellow++;
+                else if (r > 200 && g > 100 && g < 180 && b < 100) colorCounts.orange++;
+                else if (r > 100 && g < 100 && b > 100) colorCounts.purple++;
+                else if (r > 200 && g < 150 && b > 150) colorCounts.pink++;
+                else if (r > 100 && r < 200 && g < 100 && b < 100) colorCounts.brown++;
+            }
+            
+            // Find color with highest count
+            let maxColor = 'unknown';
+            let maxCount = 0;
+            
+            for (const [color, count] of Object.entries(colorCounts)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    maxColor = color;
+                }
+            }
+            
+            return maxColor;
+        }
+        
+        // Initialize camera
+        async function initCamera() {
+            try {
+                const constraints = {
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'environment'
+                    }
+                };
+                
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                
+                // Set canvas size once video metadata is loaded
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                };
+                
+                isCameraActive = true;
+                return true;
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+                storyText.innerHTML += `<p class="error">Camera access error: ${err.message}. Continuing with simulated data.</p>`;
+                return false;
+            }
+        }
+        
+        // Start storytelling
+        startBtn.addEventListener('click', async function() {
+            // Initialize the storytelling UI
+            storyText.innerHTML = '<p>Starting storytelling mode...</p>';
+            this.disabled = true;
+            pauseBtn.disabled = false;
+            stopBtn.disabled = false;
+            
+            // Load model and initialize camera
+            await loadModel();
+            await initCamera();
+            
+            // Start continuous object detection
+            startDetectionLoop();
+            
+            // Generate initial narrative
+            setTimeout(async () => {
+                const initialNarrative = await generateNarrative();
+                storyText.innerHTML = `<p>${initialNarrative}</p>`;
+                
+                // Use speech synthesis to speak the narrative
+                if ('speechSynthesis' in window) {
+                    const speech = new SpeechSynthesisUtterance(initialNarrative);
+                    speech.rate = 0.9; // Slightly slower speech rate
+                    speech.pitch = 1.0;
+                    speechSynthesis.speak(speech);
+                }
+            }, 2000);
+            
+            // Continue generating narratives every 8 seconds
+            storyInterval = setInterval(async () => {
+                if (!isPaused) {
+                    const narrative = await generateNarrative();
+                    storyText.innerHTML += `<p>${narrative}</p>`;
+                    
+                    // Auto-scroll to the bottom
+                    storyText.scrollTop = storyText.scrollHeight;
+                    
+                    // Use speech synthesis to speak the narrative
+                    if ('speechSynthesis' in window) {
+                        const speech = new SpeechSynthesisUtterance(narrative);
+                        speech.rate = 0.9;
+                        speech.pitch = 1.0;
+                        speechSynthesis.speak(speech);
+                    }
+                }
+            }, 8000); // Every 8 seconds
+        });
+        
+        // Pause storytelling
+        pauseBtn.addEventListener('click', function() {
+            isPaused = true;
+            this.disabled = true;
+            resumeBtn.disabled = false;
+            storyText.innerHTML += '<p><em>Storytelling paused.</em></p>';
+            
+            // Stop any ongoing speech
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+            }
+        });
+        
+        // Resume storytelling
+        resumeBtn.addEventListener('click', function() {
+            isPaused = false;
+            this.disabled = true;
+            pauseBtn.disabled = false;
+            storyText.innerHTML += '<p><em>Storytelling resumed.</em></p>';
+        });
+        
+        // Stop storytelling
+        stopBtn.addEventListener('click', function() {
+            clearInterval(storyInterval);
+            
+            // Stop animation frame
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            
+            this.disabled = true;
+            pauseBtn.disabled = true;
+            resumeBtn.disabled = true;
+            startBtn.disabled = false;
+            isPaused = false;
+            
+            // Stop any ongoing speech
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+            }
+            
+            // Stop camera if active
+            if (isCameraActive && video.srcObject) {
+                const tracks = video.srcObject.getTracks();
+                tracks.forEach(track => track.stop());
+                video.srcObject = null;
+                isCameraActive = false;
+            }
+            
+            // Clear canvas
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            
+            storyText.innerHTML += '<p><em>Storytelling stopped.</em></p>';
+        });
+        
+        // Feature toggle event listeners
+        function updateFeatureStatus() {
+            let activeFeatures = [];
+            if (objectDetectionToggle.checked) activeFeatures.push('Object Detection');
+            if (navigationAssistanceToggle.checked) activeFeatures.push('Navigation Assistance');
+            if (colorDetectionToggle.checked) activeFeatures.push('Color Detection');
+            if (showBoundingBoxesToggle.checked) activeFeatures.push('Bounding Boxes');
+            
+            if (!isPaused && storyInterval) {
+                storyText.innerHTML += `<p><em>Active features updated: ${activeFeatures.join(', ')}</em></p>`;
+                storyText.scrollTop = storyText.scrollHeight;
+            }
+        }
+        
+        objectDetectionToggle.addEventListener('change', updateFeatureStatus);
+        navigationAssistanceToggle.addEventListener('change', updateFeatureStatus);
+        colorDetectionToggle.addEventListener('change', updateFeatureStatus);
+        showBoundingBoxesToggle.addEventListener('change', updateFeatureStatus);
+
+        // Voice command functionality
+        const voiceCommandStatus = document.getElementById('voiceCommandStatus');
+        const listeningText = document.getElementById('listeningText');
+        const recognizedText = document.getElementById('recognizedText');
+        
+        let recognition = null;
+        let isListening = false;
+        
+        // Initialize speech recognition
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+                
+                recognition.onstart = function() {
+                    isListening = true;
+                    voiceCommandBtn.classList.add('active');
+                    voiceCommandStatus.style.display = 'block';
+                    listeningText.textContent = 'Listening for commands...';
+                    recognizedText.textContent = '';
+                };
+                
+                recognition.onresult = function(event) {
+                    const command = event.results[0][0].transcript.trim().toLowerCase();
+                    recognizedText.textContent = `Command: "${command}"`;
+                    
+                    // Process command
+                    processVoiceCommand(command);
+                };
+                
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error:', event.error);
+                    listeningText.textContent = `Error: ${event.error}`;
+                    setTimeout(stopListening, 2000);
+                };
+                
+                recognition.onend = function() {
+                    stopListening();
+                };
+                
+                return true;
+            } else {
+                storyText.innerHTML += '<p class="error">Speech recognition not supported in your browser.</p>';
+                return false;
+            }
+        }
+        
+        // Process voice command
+        function processVoiceCommand(command) {
+            // Display command in story text
+            storyText.innerHTML += `<p><em>Voice command: "${command}"</em></p>`;
+            
+            // Send command to backend
+            fetch('/api/navigation/process_voice', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ voice_input: command })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Command was recognized
+                    storyText.innerHTML += `<p class="command-result">${data.message}</p>`;
+                    
+                    // Speak the response
+                    if ('speechSynthesis' in window) {
+                        const speech = new SpeechSynthesisUtterance(data.message);
+                        speech.rate = 0.9;
+                        speechSynthesis.speak(speech);
+                    }
+                } else {
+                    // Command not recognized
+                    storyText.innerHTML += `<p class="command-error">Command not recognized. Try saying "help" for available commands.</p>`;
+                }
+                
+                storyText.scrollTop = storyText.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error processing voice command:', error);
+                storyText.innerHTML += `<p class="command-error">Error processing command: ${error.message}</p>`;
+                storyText.scrollTop = storyText.scrollHeight;
+            });
+        }
+        
+        // Start/stop listening
+        function toggleListening() {
+            if (!recognition) {
+                const initialized = initSpeechRecognition();
+                if (!initialized) {
+                    return;
+                }
+            }
+            
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+        
+        function startListening() {
+            recognition.start();
+        }
+        
+        function stopListening() {
+            if (recognition) {
+                recognition.stop();
+            }
+            isListening = false;
+            voiceCommandBtn.classList.remove('active');
+            voiceCommandStatus.style.display = 'none';
+        }
+        
+        // Voice command button event listener
+        voiceCommandBtn.addEventListener('click', toggleListening);
+    });
+</script>
+{% endblock %} 

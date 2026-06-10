@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blind Vision Comprehensive Workflow Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #003d20;
+            text-align: center;
+        }
+        .mermaid {
+            margin: 20px auto;
+        }
+        .download-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #003d20;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .download-btn:hover {
+            background-color: #005a30;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Blind Vision - Comprehensive Workflow Diagram</h1>
+        
+        <div class="mermaid">
+flowchart TD
+    %% Main user flow start
+    Start([Start]) --> HomePage[User visits Home Page]
+    
+    %% Authentication subgraph
+    subgraph "Authentication"
+        HomePage --> IsAuth{Is user authenticated?}
+        IsAuth -->|No| AuthOptions[Show Login/Register Options]
+        IsAuth -->|Yes| Dashboard[Dashboard]
+        
+        %% Registration flow
+        AuthOptions --> ChooseAuth{User chooses}
+        ChooseAuth -->|Register| RegPage[Registration Page]
+        RegPage --> SubmitReg[Submit Registration Form]
+        SubmitReg --> ExistCheck{User exists?}
+        ExistCheck -->|Yes| RegError[Show Error]
+        ExistCheck -->|No| CreateUser[Create User]
+        CreateUser --> GenOTP[Generate OTP]
+        GenOTP --> SendEmail[Send Email]
+        SendEmail --> EmailCheck{Email sent?}
+        EmailCheck -->|Yes| VerifyPage[Verification Page]
+        EmailCheck -->|No| DeleteUser[Delete User Record]
+        DeleteUser --> RegError
+        RegError --> RegPage
+        
+        %% OTP Verification
+        VerifyPage --> EnterOTP[User Enters OTP]
+        EnterOTP --> OTPCheck{OTP Valid?}
+        OTPCheck -->|No| OTPError[Show Error]
+        OTPCheck -->|Yes| MarkVerified[Mark User Verified]
+        OTPError --> VerifyPage
+        MarkVerified --> LoginRedirect[Redirect to Login]
+        
+        %% OTP Resend
+        VerifyPage --> ResendOTP[Resend OTP]
+        ResendOTP --> NewOTP[Generate New OTP]
+        NewOTP --> SendNewEmail[Send New Email]
+        SendNewEmail --> VerifyPage
+        
+        %% Login flow
+        ChooseAuth -->|Login| LoginPage[Login Page]
+        LoginRedirect --> LoginPage
+        LoginPage --> SubmitLogin[Submit Login Form]
+        SubmitLogin --> CredsCheck{Valid Credentials?}
+        CredsCheck -->|No| LoginError[Show Error]
+        CredsCheck -->|Yes| VerifiedCheck{User verified?}
+        VerifiedCheck -->|No| NotVerified[Show Not Verified Message]
+        VerifiedCheck -->|Yes| LoginUser[Login User]
+        LoginUser --> Dashboard
+        LoginError --> LoginPage
+        NotVerified --> LoginPage
+    end
+    
+    %% Main Dashboard
+    Dashboard --> FeatureSelect{Select Feature}
+    
+    %% Features subgraph
+    subgraph "Core Features"
+        FeatureSelect -->|Object Detection| ObjDetection[Object Detection]
+        FeatureSelect -->|Text Recognition| TextRecog[Text Recognition]
+        FeatureSelect -->|Color Detection| ColorDetect[Color Detection]
+        FeatureSelect -->|Navigation| Navigation[Navigation Assistance]
+        FeatureSelect -->|Storytelling| Storytelling[Storytelling]
+        FeatureSelect -->|Object-Color| ObjColor[Object-Color Detection]
+        FeatureSelect -->|Camera| Camera[Camera Interface]
+        
+        %% Object Detection flow
+        ObjDetection --> CaptureObjImg[Capture Image]
+        CaptureObjImg --> ProcessObjImg[Process Image]
+        ProcessObjImg --> DetectObjects[Detect Objects]
+        DetectObjects --> DisplayObjResults[Display Results]
+        
+        %% Text Recognition flow
+        TextRecog --> CaptureTextImg[Capture Image]
+        CaptureTextImg --> ProcessTextImg[Process Image]
+        ProcessTextImg --> ExtractText[Extract Text]
+        ExtractText --> DisplayText[Display Text]
+        
+        %% Color Detection flow
+        ColorDetect --> CaptureColorImg[Capture Image]
+        CaptureColorImg --> ProcessColorImg[Process Image]
+        ProcessColorImg --> IdentifyColors[Identify Colors]
+        IdentifyColors --> DisplayColors[Display Colors]
+        
+        %% Navigation flow
+        Navigation --> CaptureNavImg[Capture Environment]
+        CaptureNavImg --> DetectNavObj[Detect Objects]
+        DetectNavObj --> CalculatePath[Calculate Path]
+        CalculatePath --> GenerateDirections[Generate Directions]
+        GenerateDirections --> ProvideGuidance[Provide Guidance]
+    end
+    
+    %% User feedback
+    subgraph "Feedback Loop"
+        DisplayObjResults --> Feedback[User Feedback]
+        DisplayText --> Feedback
+        DisplayColors --> Feedback
+        ProvideGuidance --> Feedback
+        
+        Feedback --> AnalyzeFeedback[Analyze Feedback]
+        AnalyzeFeedback --> AdjustParams[Adjust Parameters]
+        AdjustParams --> ImproveModels[Improve Models]
+        ImproveModels --> UserHistory[Update User History]
+    end
+    
+    %% Logout flow
+    Dashboard --> LogoutOption[Logout Option]
+    LogoutOption --> PerformLogout[Perform Logout]
+    PerformLogout --> ClearSession[Clear Session]
+    ClearSession --> HomePage
+    
+    %% Styling
+    classDef primary fill:#e2f0fb,stroke:#0c5460,color:#0c5460
+    classDef success fill:#d4edda,stroke:#155724,color:#155724
+    classDef error fill:#f8d7da,stroke:#721c24,color:#721c24
+    classDef warning fill:#fff3cd,stroke:#856404,color:#856404
+    classDef default fill:#f5f5f5,stroke:#333,color:#333
+    
+    class Dashboard,HomePage primary
+    class DisplayObjResults,DisplayText,DisplayColors,ProvideGuidance,MarkVerified,LoginUser success
+    class RegError,OTPError,LoginError,DeleteUser error
+    class IsAuth,ChooseAuth,ExistCheck,EmailCheck,OTPCheck,CredsCheck,VerifiedCheck,FeatureSelect warning
+        </div>
+        
+        <button class="download-btn" id="downloadBtn">Download as PNG</button>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+        
+        // Function to download as PNG
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            // Get the SVG element
+            const svg = document.querySelector('.mermaid svg');
+            
+            // Create a canvas
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Create an image to draw the SVG to the canvas
+            const img = new Image();
+            
+            // Convert SVG to a data URL
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+            const url = URL.createObjectURL(svgBlob);
+            
+            // When the image loads, draw it to the canvas and download
+            img.onload = function() {
+                // Set canvas dimensions to match the SVG
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // Draw the image to the canvas
+                ctx.drawImage(img, 0, 0);
+                
+                // Convert canvas to PNG and download
+                const pngUrl = canvas.toDataURL('image/png');
+                const downloadLink = document.createElement('a');
+                downloadLink.href = pngUrl;
+                downloadLink.download = 'blind_vision_comprehensive_workflow.png';
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+                // Clean up
+                URL.revokeObjectURL(url);
+            };
+            
+            // Set the source of the image to the SVG data URL
+            img.src = url;
+        });
+    </script>
+</body>
+</html> 

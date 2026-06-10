@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blind Vision Workflow Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #003d20;
+            text-align: center;
+        }
+        .mermaid {
+            margin: 20px auto;
+        }
+        .download-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #003d20;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .download-btn:hover {
+            background-color: #005a30;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Blind Vision - Application Workflow Diagram</h1>
+        
+        <div class="mermaid">
+graph TD
+    subgraph "Authentication Flow"
+        A[User Access] --> B{User Registered?}
+        B -->|No| C[Register]
+        B -->|Yes| D{User Verified?}
+        C --> E[Email Verification]
+        E --> E1[Send OTP]
+        E1 --> E2[Verify OTP]
+        E2 -->|Valid OTP| D
+        E2 -->|Invalid OTP| E1
+        D -->|Yes| F[Login]
+        D -->|No| E
+        F --> G[Dashboard]
+    end
+
+    subgraph "Core Features"
+        G --> H[Object Detection]
+        G --> I[Text Recognition]
+        G --> J[Color Detection]
+        G --> K[Navigation Assistance]
+        G --> L[Storytelling]
+        G --> M[Object-Color Detection]
+        G --> N[Camera Interface]
+    end
+
+    subgraph "Service Layer"
+        H --> O[Object Detection Service]
+        I --> P[Text Recognition Service]
+        J --> Q[Color Detection Service]
+        K --> R[Navigation Service]
+        L --> S[Voice Service]
+        M --> T[Enhanced Color Service]
+        
+        O --> U[Camera Service]
+        P --> U
+        Q --> U
+        R --> U
+        T --> U
+    end
+
+    subgraph "Processing Flow"
+        U --> V[Image Capture]
+        V --> W[Image Processing]
+        W --> X[AI Model Processing]
+        X --> Y[Result Generation]
+        Y --> Z[User Feedback]
+    end
+
+    subgraph "Adaptive Learning"
+        Z --> AA[User Behavior Analysis]
+        AA --> AB[Parameter Optimization]
+        AB --> AC[Feedback Integration]
+        AC --> AD[Model Adjustment]
+        AD --> X
+    end
+        </div>
+        
+        <button class="download-btn" id="downloadBtn">Download as PNG</button>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: true
+            }
+        });
+        
+        // Function to download as PNG
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            // Get the SVG element
+            const svg = document.querySelector('.mermaid svg');
+            
+            // Create a canvas
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Create an image to draw the SVG to the canvas
+            const img = new Image();
+            
+            // Convert SVG to a data URL
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+            const url = URL.createObjectURL(svgBlob);
+            
+            // When the image loads, draw it to the canvas and download
+            img.onload = function() {
+                // Set canvas dimensions to match the SVG
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // Draw the image to the canvas
+                ctx.drawImage(img, 0, 0);
+                
+                // Convert canvas to PNG and download
+                const pngUrl = canvas.toDataURL('image/png');
+                const downloadLink = document.createElement('a');
+                downloadLink.href = pngUrl;
+                downloadLink.download = 'blind_vision_workflow.png';
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+                // Clean up
+                URL.revokeObjectURL(url);
+            };
+            
+            // Set the source of the image to the SVG data URL
+            img.src = url;
+        });
+    </script>
+</body>
+</html> 

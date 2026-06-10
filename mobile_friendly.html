@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blind Vision - Mobile Camera Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        
+        .video-container {
+            width: 100%;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #333;
+            aspect-ratio: 16/9;
+            margin: 20px 0;
+        }
+        
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        
+        .results-container {
+            min-height: 100px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 20px;
+        }
+        
+        .results-container p {
+            margin: 5px 0;
+        }
+        
+        .object-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .status {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Blind Vision</h1>
+        <h2>Mobile Camera Test</h2>
+        
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+        </div>
+        
+        <div class="status" id="status">Camera is OFF</div>
+        
+        <div class="button-row">
+            <button id="startButton" class="btn">Start Camera</button>
+            <button id="stopButton" class="btn btn-danger" disabled>Stop Camera</button>
+        </div>
+        
+        <div class="results-container" id="results">
+            <p>Object detection results will appear here.</p>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('video');
+            const startButton = document.getElementById('startButton');
+            const stopButton = document.getElementById('stopButton');
+            const status = document.getElementById('status');
+            const results = document.getElementById('results');
+            
+            let stream = null;
+            let detectionInterval = null;
+            
+            // Sample objects for simulation
+            const sampleObjects = [
+                'pedestrian', 'vehicle', 'staircase', 'doorway', 
+                'chair', 'table', 'bicycle', 'stoplight', 'sidewalk'
+            ];
+            
+            // Start camera
+            startButton.addEventListener('click', async function() {
+                try {
+                    // Use the rear camera if available
+                    const constraints = {
+                        video: {
+                            facingMode: { ideal: 'environment' }
+                        }
+                    };
+                    
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = stream;
+                    
+                    // Update UI
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+                    status.textContent = 'Camera is ON';
+                    status.style.color = 'green';
+                    
+                    // Start detection simulation
+                    results.innerHTML = '';
+                    simulateDetection();
+                    
+                } catch (err) {
+                    console.error('Error accessing camera:', err);
+                    alert('Error accessing camera: ' + err.message);
+                    status.textContent = 'Camera Error: ' + err.message;
+                    status.style.color = 'red';
+                }
+            });
+            
+            // Stop camera
+            stopButton.addEventListener('click', function() {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    video.srcObject = null;
+                    
+                    // Update UI
+                    startButton.disabled = false;
+                    stopButton.disabled = true;
+                    status.textContent = 'Camera is OFF';
+                    status.style.color = 'black';
+                    
+                    // Stop detection
+                    if (detectionInterval) {
+                        clearInterval(detectionInterval);
+                        detectionInterval = null;
+                    }
+                    
+                    results.innerHTML = '<p>Object detection results will appear here.</p>';
+                }
+            });
+            
+            // Simulate object detection
+            function simulateDetection() {
+                if (detectionInterval) {
+                    clearInterval(detectionInterval);
+                }
+                
+                detectionInterval = setInterval(() => {
+                    // Select a random object
+                    const randomObject = sampleObjects[Math.floor(Math.random() * sampleObjects.length)];
+                    const confidence = (Math.random() * 30 + 70).toFixed(1); // 70-100%
+                    
+                    // Create element
+                    const objectItem = document.createElement('div');
+                    objectItem.className = 'object-item';
+                    objectItem.innerHTML = `
+                        <span>${randomObject}</span>
+                        <span>${confidence}% confidence</span>
+                    `;
+                    
+                    // Add to results
+                    results.innerHTML = '';
+                    results.appendChild(objectItem);
+                    
+                    // Add more for demonstration (2-3 objects)
+                    if (Math.random() > 0.5) {
+                        setTimeout(() => {
+                            const randomObject2 = sampleObjects[Math.floor(Math.random() * sampleObjects.length)];
+                            const confidence2 = (Math.random() * 30 + 70).toFixed(1);
+                            
+                            const objectItem2 = document.createElement('div');
+                            objectItem2.className = 'object-item';
+                            objectItem2.innerHTML = `
+                                <span>${randomObject2}</span>
+                                <span>${confidence2}% confidence</span>
+                            `;
+                            
+                            results.appendChild(objectItem2);
+                        }, 500);
+                    }
+                    
+                }, 2000); // Update every 2 seconds
+            }
+        });
+    </script>
+</body>
+</html> 

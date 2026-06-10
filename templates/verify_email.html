@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Verify Email - Blind Vision{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Email Verification - Blind Vision</h2>
+    <p>We've sent a verification code to <strong>{{ email }}</strong>.</p>
+    <p>Please enter the 6-digit code below to verify your email address.</p>
+    
+    {% if testing_otp %}
+    <div class="testing-otp-box">
+        <h3>Testing Mode</h3>
+        <p>Application is running in testing mode.</p>
+        <p>Use this OTP for verification: <strong>{{ testing_otp }}</strong></p>
+    </div>
+    {% endif %}
+    
+    <form method="POST" action="{{ url_for('verify_email') }}">
+        <div class="form-group">
+            <label for="otp" class="form-label">Verification Code (OTP)</label>
+            <input type="text" id="otp" name="otp" class="form-control" maxlength="6" pattern="[0-9]{6}" required>
+        </div>
+        <button type="submit" class="btn">Verify Email</button>
+    </form>
+    
+    <div style="margin-top: 20px; text-align: center;">
+        <p>Didn't receive the code? <a href="{{ url_for('resend_otp') }}">Resend code</a></p>
+        <p>
+            <small>
+                Note: The verification code expires after 5 minutes. If it expires, you can request a new one.
+            </small>
+        </p>
+    </div>
+</div>
+
+<style>
+    .testing-otp-box {
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+        text-align: center;
+    }
+    
+    .testing-otp-box strong {
+        font-size: 1.2em;
+        background: #fff;
+        padding: 5px 10px;
+        border-radius: 3px;
+        border: 1px dashed #856404;
+    }
+</style>
+{% endblock %} 

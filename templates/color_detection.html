@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Color Detection</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- TensorFlow.js libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #video {
+            width: 100%;
+            max-width: 640px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .alert {
+            margin-top: 15px;
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .video-container {
+            position: relative;
+            display: inline-block;
+        }
+        #colorInfo {
+            margin-top: 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #dominantColor {
+            width: 100px;
+            height: 100px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .controls {
+            margin-top: 15px;
+        }
+        .color-name {
+            font-size: 24px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="my-4">Color Detection</h1>
+        <p>Identify colors in your environment with audio feedback.</p>
+        
+        <div class="row">
+            <div class="col-md-12">
+                <div class="video-container">
+                    <video id="video" height="480" autoplay></video>
+                    <canvas id="canvas"></canvas>
+                </div>
+                <div id="colorInfo" class="mt-3">Point your camera at an object to detect its color</div>
+                <div id="dominantColor"></div>
+                <div class="color-name" id="colorName"></div>
+                
+                <div class="controls mt-3">
+                    <button id="speakButton" class="btn btn-primary">Speak Color</button>
+                    <button id="autospeakToggle" class="btn btn-outline-secondary">Auto-Speak: Off</button>
+                    <button id="frequencyBtn" class="btn btn-outline-info">Frequency: Medium</button>
+                </div>
+                
+                <div id="loadingMessage" class="alert alert-info mt-3">Starting camera...</div>
+                <div id="errorMessage" class="alert alert-danger mt-3" style="display: none;"></div>
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const colorInfo = document.getElementById('colorInfo');
+        const dominantColorDiv = document.getElementById('dominantColor');
+        const colorNameDiv = document.getElementById('colorName');
+        const errorMessage = document.getElementById('errorMessage');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const speakButton = document.getElementById('speakButton');
+        const autospeakToggle = document.getElementById('autospeakToggle');
+        const frequencyBtn = document.getElementById('frequencyBtn');
+        
+        // Speech synthesis
+        const synth = window.speechSynthesis;
+        
+        // Configuration
+        let autoSpeak = false;
+        let speakFrequency = 2000; // milliseconds between auto-speak events
+        let lastSpeakTime = 0;
+        
+        // Color detection settings
+        const sampleSize = 50; // Size of the sampling square in the center
+        
+        // Named colors and their RGB ranges
+        const namedColors = [
+            { name: "Red", rgb: [255, 0, 0], range: 30 },
+            { name: "Green", rgb: [0, 255, 0], range: 30 },
+            { name: "Blue", rgb: [0, 0, 255], range: 30 },
+            { name: "Yellow", rgb: [255, 255, 0], range: 30 },
+            { name: "Cyan", rgb: [0, 255, 255], range: 30 },
+            { name: "Magenta", rgb: [255, 0, 255], range: 30 },
+            { name: "Orange", rgb: [255, 165, 0], range: 30 },
+            { name: "Purple", rgb: [128, 0, 128], range: 30 },
+            { name: "Pink", rgb: [255, 192, 203], range: 30 },
+            { name: "Brown", rgb: [165, 42, 42], range: 30 },
+            { name: "Black", rgb: [0, 0, 0], range: 30 },
+            { name: "White", rgb: [255, 255, 255], range: 30 },
+            { name: "Gray", rgb: [128, 128, 128], range: 30 }
+        ];
+
+        // Check if we're running on HTTPS or localhost
+        const isSecureContext = window.isSecureContext || 
+                               window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1';
+
+        // Initialize camera
+        function initCamera() {
+            if (!isSecureContext) {
+                errorMessage.textContent = "Camera access requires HTTPS unless on localhost. Please use a secure connection.";
+                errorMessage.style.display = "block";
+                loadingMessage.style.display = "none";
+                return;
+            }
+            
+            if (navigator.mediaDevices?.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                    .then(function (stream) {
+                        video.srcObject = stream;
+                        video.onloadeddata = () => {
+                            // Set canvas dimensions to match video
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            
+                            loadingMessage.style.display = "none";
+                            
+                            // Start color detection
+                            detectColor();
+                        };
+                    })
+                    .catch(function (err) {
+                        errorMessage.textContent = "Error accessing camera: " + err.message;
+                        errorMessage.style.display = "block";
+                        loadingMessage.style.display = "none";
+                        console.error("Error accessing camera:", err);
+                    });
+            } else {
+                errorMessage.textContent = "getUserMedia not supported or navigator.mediaDevices is undefined.";
+                errorMessage.style.display = "block";
+                loadingMessage.style.display = "none";
+            }
+        }
+
+        // Get dominant color from the center of the video
+        function getDominantColor() {
+            if (!video.videoWidth) return null;
+            
+            const centerX = video.videoWidth / 2;
+            const centerY = video.videoHeight / 2;
+            const halfSample = sampleSize / 2;
+            
+            // Draw the current video frame onto the canvas
+            ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            
+            // Get image data from the center square
+            const imageData = ctx.getImageData(
+                centerX - halfSample, 
+                centerY - halfSample, 
+                sampleSize, 
+                sampleSize
+            );
+            
+            // Draw a rectangle to show the sampling area
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(
+                centerX - halfSample, 
+                centerY - halfSample, 
+                sampleSize, 
+                sampleSize
+            );
+            
+            // Calculate average RGB
+            let totalR = 0, totalG = 0, totalB = 0;
+            const pixelCount = imageData.data.length / 4;
+            
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                totalR += imageData.data[i];
+                totalG += imageData.data[i + 1];
+                totalB += imageData.data[i + 2];
+            }
+            
+            const avgR = Math.round(totalR / pixelCount);
+            const avgG = Math.round(totalG / pixelCount);
+            const avgB = Math.round(totalB / pixelCount);
+            
+            return { r: avgR, g: avgG, b: avgB };
+        }
+        
+        // Find the closest named color
+        function findColorName(color) {
+            let closestDistance = Number.MAX_VALUE;
+            let closestColor = "Unknown";
+            
+            namedColors.forEach(namedColor => {
+                const distance = Math.sqrt(
+                    Math.pow(color.r - namedColor.rgb[0], 2) +
+                    Math.pow(color.g - namedColor.rgb[1], 2) +
+                    Math.pow(color.b - namedColor.rgb[2], 2)
+                );
+                
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestColor = namedColor.name;
+                }
+            });
+            
+            return closestColor;
+        }
+        
+        // Detect color from video
+        function detectColor() {
+            if (!video.videoWidth) {
+                requestAnimationFrame(detectColor);
+                return;
+            }
+            
+            const color = getDominantColor();
+            
+            if (color) {
+                const colorName = findColorName(color);
+                const colorHex = rgbToHex(color.r, color.g, color.b);
+                
+                // Display color information
+                colorInfo.innerHTML = `Detected Color: RGB(${color.r}, ${color.g}, ${color.b})`;
+                dominantColorDiv.style.backgroundColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                colorNameDiv.textContent = colorName;
+                
+                // Automatically speak the color if enabled
+                const now = Date.now();
+                if (autoSpeak && now - lastSpeakTime > speakFrequency) {
+                    speakColor(colorName);
+                    lastSpeakTime = now;
+                }
+            }
+            
+            requestAnimationFrame(detectColor);
+        }
+        
+        // Convert RGB to Hex
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+        
+        // Speak the detected color
+        function speakColor(colorName) {
+            if (synth.speaking) {
+                synth.cancel();
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(colorName);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            synth.speak(utterance);
+        }
+        
+        // Event listeners
+        speakButton.addEventListener('click', () => {
+            const colorName = colorNameDiv.textContent;
+            if (colorName) {
+                speakColor(colorName);
+            }
+        });
+        
+        autospeakToggle.addEventListener('click', () => {
+            autoSpeak = !autoSpeak;
+            autospeakToggle.textContent = `Auto-Speak: ${autoSpeak ? 'On' : 'Off'}`;
+            autospeakToggle.classList.toggle('btn-outline-secondary');
+            autospeakToggle.classList.toggle('btn-secondary');
+        });
+        
+        frequencyBtn.addEventListener('click', () => {
+            // Cycle through frequency options: slow (3s), medium (2s), fast (1s)
+            if (speakFrequency === 3000) {
+                speakFrequency = 2000;
+                frequencyBtn.textContent = "Frequency: Medium";
+            } else if (speakFrequency === 2000) {
+                speakFrequency = 1000;
+                frequencyBtn.textContent = "Frequency: Fast";
+            } else {
+                speakFrequency = 3000;
+                frequencyBtn.textContent = "Frequency: Slow";
+            }
+        });
+        
+        // Initialize
+        initCamera();
+    </script>
+</body>
+</html> 

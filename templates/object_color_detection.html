@@ -1,0 +1,1170 @@
+{% extends "base.html" %}
+
+{% block title %}Object Detection with Color Labeling - Blind Vision{% endblock %}
+
+{% block content %}
+<h1 class="my-4">Object Detection with Color Labeling</h1>
+
+<div class="instructions">
+    <p><strong>Instructions:</strong> Point your camera at objects around you. The system will detect objects and identify their dominant colors.</p>
+    <p>Toggle auto-detection or adjust detection frequency using the controls below.</p>
+    <p class="mb-0"><strong>Keyboard shortcuts:</strong> 
+        <span class="badge bg-danger">ESC</span> Stop Video &nbsp;•&nbsp;
+        <span class="badge bg-primary">C</span> Capture All Objects</p>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="video-container">
+            <video id="video" height="480" autoplay muted playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        
+        <div id="loadingSpinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <p>Loading model and starting camera...</p>
+        </div>
+        
+        <div class="controls">
+            <div class="btn-group mb-2 me-2">
+                <button id="captureBtn" class="btn btn-primary" disabled>
+                    <i class="fas fa-camera"></i> Detect Objects
+                </button>
+                <button id="capturePhotoBtn" class="btn btn-info" disabled>
+                    <i class="fas fa-camera-retro"></i> Capture Photo
+                </button>
+            </div>
+            
+            <div class="btn-group mb-2 me-2">
+                <button id="recordVideoBtn" class="btn btn-primary" disabled>
+                    <i class="fas fa-video"></i> Record Video
+                </button>
+                <button id="stopRecordingBtn" class="btn btn-danger" disabled>
+                    <i class="fas fa-video-slash"></i> Stop Recording
+                </button>
+            </div>
+            
+            <div class="btn-group mb-2 me-2">
+                <button id="pauseBtn" class="btn btn-warning" disabled>
+                    <i class="fas fa-pause"></i> Pause
+                </button>
+                <button id="stopBtn" class="btn btn-danger btn-lg" disabled title="Stop camera & detection (ESC)">
+                    <i class="fas fa-stop-circle"></i> STOP VIDEO
+                </button>
+            </div>
+            
+            <div class="btn-group mb-2 me-2">
+                <button id="clearBtn" class="btn btn-secondary" disabled>
+                    <i class="fas fa-trash-alt"></i> Clear All
+                </button>
+                <button id="deleteAllBtn" class="btn btn-outline-danger" disabled>
+                    <i class="fas fa-trash"></i> Delete All Media
+                </button>
+            </div>
+            
+            <div class="btn-group mb-2">
+                <button id="autoDetectToggle" class="btn btn-outline-secondary" disabled>
+                    <i class="fas fa-sync"></i> Auto-Detect: Off
+                </button>
+                <button id="frequencyBtn" class="btn btn-outline-info" disabled>
+                    <i class="fas fa-clock"></i> Frequency: Medium
+                </button>
+                <button id="speakToggle" class="btn btn-outline-success" disabled>
+                    <i class="fas fa-volume-up"></i> Audio: Off
+                </button>
+            </div>
+        </div>
+        
+        <div id="detectionResults" style="display: none;">
+            <h5>Detected Objects:</h5>
+            <div id="objectsList"></div>
+        </div>
+        
+        <div id="capturedImagesContainer" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">Captured Images:</h5>
+                <button id="clearCapturedBtn" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-trash-alt"></i> Delete All
+                </button>
+            </div>
+            <div id="capturedImagesList"></div>
+        </div>
+        
+        <div id="errorMessage" class="alert alert-danger mt-3" style="display: none;"></div>
+        
+        <div class="mt-3">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    #video {
+        width: 100%;
+        max-width: 640px;
+        max-height: 360px; /* Reduced height for better fit */
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        object-fit: cover; /* Maintain aspect ratio */
+    }
+    .alert {
+        margin-top: 15px;
+    }
+    #canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%; /* Match the video width */
+        height: 100%; /* Match the video height */
+    }
+    .video-container {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+        max-width: 640px;
+        max-height: 360px; /* Match video max-height */
+        overflow: hidden; /* Prevent overflow */
+    }
+    #detectionResults {
+        margin-top: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        max-height: 300px; /* Limit height */
+        overflow-y: auto; /* Add scrolling */
+    }
+    .object-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        padding: 6px;
+        border-radius: 4px;
+        background-color: #fff;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        font-size: 0.9rem;
+    }
+    .color-chip {
+        width: 24px;
+        height: 24px;
+        border-radius: 3px;
+        margin-right: 8px;
+        border: 1px solid #ddd;
+        flex-shrink: 0; /* Prevent shrinking */
+    }
+    .object-name {
+        font-weight: bold;
+        flex-grow: 1;
+    }
+    .color-name {
+        margin-left: 8px;
+        color: #666;
+        font-size: 0.85rem;
+    }
+    .confidence {
+        font-size: 0.8rem;
+        color: #888;
+        margin-left: 8px;
+    }
+    .controls {
+        margin-top: 15px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .controls button {
+        margin-bottom: 5px;
+    }
+    #stopBtn {
+        font-weight: bold;
+        padding: 10px 20px;
+        box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+        transform: scale(1.1);
+        transition: all 0.2s ease;
+        border-width: 2px;
+    }
+    #stopBtn:hover:not([disabled]) {
+        transform: scale(1.15);
+        box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+        background-color: #c82333;
+    }
+    #stopBtn:focus {
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.5);
+    }
+    #stopBtn:disabled {
+        opacity: 0.65;
+        transform: scale(1);
+        box-shadow: none;
+    }
+    .instructions {
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+    }
+    #loadingSpinner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 20px;
+    }
+    .spinner-border {
+        margin-right: 10px;
+    }
+    /* Additional styles for captured images and delete buttons */
+    .delete-btn {
+        color: #dc3545;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        margin-left: 4px;
+        flex-shrink: 0; /* Prevent shrinking */
+    }
+    .delete-btn:hover {
+        color: #bd2130;
+    }
+    .action-btns {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0; /* Prevent shrinking */
+    }
+    .capture-btn {
+        color: #0d6efd;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        flex-shrink: 0; /* Prevent shrinking */
+    }
+    .capture-btn:hover {
+        color: #0a58ca;
+    }
+    .captured-image {
+        max-width: 100%;
+        max-height: 200px; /* Limit height */
+        margin-top: 10px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        object-fit: contain; /* Maintain aspect ratio */
+    }
+    #capturedImagesContainer {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f8f9fa;
+        display: none;
+        max-height: 400px; /* Limit height */
+        overflow-y: auto; /* Add scrolling */
+    }
+    .image-card {
+        margin-bottom: 15px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: white;
+    }
+    .image-info {
+        margin-bottom: 10px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    /* Responsive adjustments */
+    @media screen and (max-width: 576px) {
+        .container {
+            padding: 10px;
+        }
+        .controls {
+            gap: 5px;
+        }
+        .controls button {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+        }
+        #video, .video-container {
+            max-height: 240px; /* Even smaller on mobile */
+        }
+        #stopBtn {
+            padding: 6px 12px;
+            font-size: 0.9rem;
+        }
+    }
+</style>
+
+<script>
+    // DOM Elements
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const captureBtn = document.getElementById('captureBtn');
+    const capturePhotoBtn = document.getElementById('capturePhotoBtn');
+    const recordVideoBtn = document.getElementById('recordVideoBtn');
+    const stopRecordingBtn = document.getElementById('stopRecordingBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const deleteAllBtn = document.getElementById('deleteAllBtn');
+    const autoDetectToggle = document.getElementById('autoDetectToggle');
+    const frequencyBtn = document.getElementById('frequencyBtn');
+    const speakToggle = document.getElementById('speakToggle');
+    const objectsList = document.getElementById('objectsList');
+    const detectionResults = document.getElementById('detectionResults');
+    const errorMessage = document.getElementById('errorMessage');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const capturedImagesContainer = document.getElementById('capturedImagesContainer');
+    const capturedImagesList = document.getElementById('capturedImagesList');
+    
+    // Application state
+    let model;
+    let videoStream;
+    let isModelLoaded = false;
+    let isPaused = false;
+    let isAutoDetecting = false;
+    let detectionFrequency = 2000; // milliseconds between auto-detections
+    let detectionInterval;
+    let speakEnabled = false;
+    let capturedImages = [];
+    let mediaRecorder;
+    let recordedChunks = [];
+    let isRecording = false;
+    let capturedVideos = [];
+    
+    // Create a container for videos if it doesn't exist
+    const capturedVideosContainer = document.createElement('div');
+    capturedVideosContainer.id = 'capturedVideosContainer';
+    capturedVideosContainer.style.display = 'none';
+    capturedVideosContainer.className = 'mt-4 p-3 border rounded bg-light';
+    
+    const videosHeader = document.createElement('div');
+    videosHeader.className = 'd-flex justify-content-between align-items-center mb-2';
+    videosHeader.innerHTML = `
+        <h5 class="mb-0">Recorded Videos:</h5>
+        <button id="clearVideosBtn" class="btn btn-sm btn-outline-danger">
+            <i class="fas fa-trash-alt"></i> Delete All
+        </button>
+    `;
+    
+    const videosList = document.createElement('div');
+    videosList.id = 'videosList';
+    
+    capturedVideosContainer.appendChild(videosHeader);
+    capturedVideosContainer.appendChild(videosList);
+    
+    document.body.appendChild(capturedVideosContainer);
+    
+    // Named colors and their RGB values
+    const namedColors = [
+        { name: "Red", rgb: [255, 0, 0], range: 50 },
+        { name: "Green", rgb: [0, 255, 0], range: 50 },
+        { name: "Blue", rgb: [0, 0, 255], range: 50 },
+        { name: "Yellow", rgb: [255, 255, 0], range: 50 },
+        { name: "Cyan", rgb: [0, 255, 255], range: 50 },
+        { name: "Magenta", rgb: [255, 0, 255], range: 50 },
+        { name: "Orange", rgb: [255, 165, 0], range: 50 },
+        { name: "Purple", rgb: [128, 0, 128], range: 50 },
+        { name: "Pink", rgb: [255, 192, 203], range: 50 },
+        { name: "Brown", rgb: [165, 42, 42], range: 50 },
+        { name: "Black", rgb: [0, 0, 0], range: 40 },
+        { name: "White", rgb: [255, 255, 255], range: 40 },
+        { name: "Gray", rgb: [128, 128, 128], range: 50 }
+    ];
+    
+    // Additional objects of interest for specific detection
+    const specificObjects = [
+        'pedestrian', 'person', 'vehicle', 'car', 'truck', 'staircase', 'stairs', 
+        'doorway', 'door', 'chair', 'table', 'bicycle', 'bike', 'stoplight', 
+        'traffic light', 'sidewalk', 'path', 'crosswalk', 'bench', 'building', 
+        'entrance', 'ramp'
+    ];
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        init();
+        
+        // Initialize the clear videos button
+        document.getElementById('clearVideosBtn').addEventListener('click', clearAllVideos);
+    });
+    
+    async function init() {
+        try {
+            // Load COCO-SSD model
+            model = await cocoSsd.load();
+            isModelLoaded = true;
+            
+            // Start camera
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                videoStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    } 
+                });
+                
+                video.srcObject = videoStream;
+                
+                // Wait for video to be ready
+                await new Promise(resolve => {
+                    video.onloadeddata = () => {
+                        resolve();
+                    };
+                });
+                
+                // Set canvas dimensions to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                // Enable buttons
+                captureBtn.disabled = false;
+                capturePhotoBtn.disabled = false;
+                recordVideoBtn.disabled = false;
+                stopRecordingBtn.disabled = true;
+                pauseBtn.disabled = false;
+                stopBtn.disabled = false;
+                clearBtn.disabled = false;
+                deleteAllBtn.disabled = false;
+                autoDetectToggle.disabled = false;
+                frequencyBtn.disabled = false;
+                speakToggle.disabled = false;
+                
+                // Hide loading spinner
+                loadingSpinner.style.display = 'none';
+            } else {
+                throw new Error("getUserMedia not supported");
+            }
+        } catch (error) {
+            console.error("Initialization error:", error);
+            errorMessage.textContent = `Error: ${error.message}`;
+            errorMessage.style.display = "block";
+            loadingSpinner.style.display = 'none';
+        }
+    }
+    
+    // Check if object is in our specific objects of interest
+    function isSpecificObject(objectClass) {
+        return specificObjects.some(obj => 
+            objectClass.toLowerCase().includes(obj.toLowerCase()) || 
+            obj.toLowerCase().includes(objectClass.toLowerCase())
+        );
+    }
+    
+    // Detect objects in the current video frame
+    async function detectObjects() {
+        if (!isModelLoaded || isPaused) return;
+        
+        try {
+            // Clear previous drawings
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw the current video frame
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Get image data for the entire frame
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // Detect objects
+            const predictions = await model.detect(video);
+            
+            // Process and display results
+            objectsList.innerHTML = '';
+            
+            if (predictions.length > 0) {
+                detectionResults.style.display = 'block';
+                
+                // Prepare audio description
+                let audioDescription = '';
+                let specificObjectsFound = false;
+                
+                predictions.forEach((prediction, index) => {
+                    const [x, y, width, height] = prediction.bbox;
+                    const objectClass = prediction.class;
+                    const score = prediction.score;
+                    
+                    // Get the dominant color for this object region
+                    const objectColor = getDominantColorForRegion(imageData, x, y, width, height);
+                    const colorName = findColorName(objectColor);
+                    
+                    // Check if this is one of our specific objects of interest
+                    const isSpecific = isSpecificObject(objectClass);
+                    if (isSpecific) specificObjectsFound = true;
+                    
+                    // Draw bounding box with highlighted border for specific objects
+                    if (isSpecific) {
+                        // Draw attention-grabbing double border for specific objects
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(x-1, y-1, width+2, height+2);
+                        ctx.strokeStyle = `rgb(${objectColor.r}, ${objectColor.g}, ${objectColor.b})`;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x, y, width, height);
+                    } else {
+                        // Regular border for other objects
+                        ctx.strokeStyle = `rgb(${objectColor.r}, ${objectColor.g}, ${objectColor.b})`;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x, y, width, height);
+                    }
+                    
+                    // Add label with color
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.fillRect(x, y - 22, Math.min(width, 120), 22);
+                    ctx.fillStyle = isSpecific ? '#FFFF00' : `rgb(${objectColor.r}, ${objectColor.g}, ${objectColor.b})`;
+                    ctx.font = '14px Arial';
+                    ctx.fillText(`${objectClass} (${colorName})`, x + 4, y - 6);
+                    
+                    // Add to the object list
+                    const objectItem = document.createElement('div');
+                    objectItem.className = 'object-item';
+                    objectItem.dataset.index = index;
+                    if (isSpecific) {
+                        objectItem.style.borderLeft = '4px solid yellow';
+                        objectItem.style.backgroundColor = 'rgba(255, 255, 200, 0.2)';
+                    }
+                    
+                    const colorChip = document.createElement('div');
+                    colorChip.className = 'color-chip';
+                    colorChip.style.backgroundColor = `rgb(${objectColor.r}, ${objectColor.g}, ${objectColor.b})`;
+                    
+                    const objectName = document.createElement('div');
+                    objectName.className = 'object-name';
+                    objectName.textContent = objectClass;
+                    if (isSpecific) {
+                        objectName.style.color = '#996600';
+                        objectName.style.fontWeight = 'bold';
+                    }
+                    
+                    const colorNameSpan = document.createElement('div');
+                    colorNameSpan.className = 'color-name';
+                    colorNameSpan.textContent = colorName;
+                    
+                    const confidenceSpan = document.createElement('div');
+                    confidenceSpan.className = 'confidence';
+                    confidenceSpan.textContent = `${Math.round(score * 100)}%`;
+                    
+                    // Add action buttons (capture and delete)
+                    const actionBtns = document.createElement('div');
+                    actionBtns.className = 'action-btns';
+                    
+                    const captureBtn = document.createElement('button');
+                    captureBtn.className = 'capture-btn';
+                    captureBtn.innerHTML = '<i class="fas fa-camera"></i>';
+                    captureBtn.title = 'Capture Image';
+                    captureBtn.addEventListener('click', () => captureObjectImage(prediction, objectClass, colorName, objectColor));
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                    deleteBtn.title = 'Remove from list';
+                    deleteBtn.addEventListener('click', () => {
+                        // Add visual feedback
+                        objectItem.style.backgroundColor = 'rgba(255, 220, 220, 0.5)';
+                        objectItem.style.borderColor = '#dc3545';
+                        
+                        // Add a small delay for visual feedback
+                        setTimeout(() => {
+                            objectItem.remove();
+                            // If no objects left, hide results container
+                            if (objectsList.children.length === 0) {
+                                detectionResults.style.display = 'none';
+                            }
+                        }, 300);
+                    });
+                    
+                    actionBtns.appendChild(captureBtn);
+                    actionBtns.appendChild(deleteBtn);
+                    
+                    objectItem.appendChild(colorChip);
+                    objectItem.appendChild(objectName);
+                    objectItem.appendChild(colorNameSpan);
+                    objectItem.appendChild(confidenceSpan);
+                    objectItem.appendChild(actionBtns);
+                    
+                    objectsList.appendChild(objectItem);
+                    
+                    // Add to audio description (prioritize specific objects, otherwise top 3)
+                    if (isSpecific || index < 3) {
+                        if (audioDescription) audioDescription += ', ';
+                        audioDescription += `${colorName} ${objectClass}`;
+                    }
+                });
+                
+                // Speak the results if enabled
+                if (speakEnabled && audioDescription) {
+                    if (specificObjectsFound) {
+                        speakText(`Alert! Detected: ${audioDescription}`);
+                    } else {
+                        speakText(`Detected: ${audioDescription}`);
+                    }
+                }
+            } else {
+                detectionResults.style.display = 'none';
+            }
+        } catch (error) {
+            console.error("Detection error:", error);
+            errorMessage.textContent = `Detection error: ${error.message}`;
+            errorMessage.style.display = "block";
+        }
+    }
+    
+    // Get dominant color for a specific region
+    function getDominantColorForRegion(imageData, x, y, width, height) {
+        // Ensure coordinates are within bounds
+        x = Math.max(0, Math.floor(x));
+        y = Math.max(0, Math.floor(y));
+        width = Math.min(Math.floor(width), canvas.width - x);
+        height = Math.min(Math.floor(height), canvas.height - y);
+        
+        let totalR = 0, totalG = 0, totalB = 0;
+        let pixelCount = 0;
+        
+        // Sample points within the region (use a grid to avoid processing every pixel)
+        const sampleStep = Math.max(1, Math.floor(Math.min(width, height) / 10));
+        
+        for (let i = y; i < y + height; i += sampleStep) {
+            for (let j = x; j < x + width; j += sampleStep) {
+                const index = (i * imageData.width + j) * 4;
+                
+                // Skip pixels outside the image bounds
+                if (index >= imageData.data.length - 3) continue;
+                
+                totalR += imageData.data[index];
+                totalG += imageData.data[index + 1];
+                totalB += imageData.data[index + 2];
+                pixelCount++;
+            }
+        }
+        
+        if (pixelCount === 0) return { r: 0, g: 0, b: 0 };
+        
+        return {
+            r: Math.round(totalR / pixelCount),
+            g: Math.round(totalG / pixelCount),
+            b: Math.round(totalB / pixelCount)
+        };
+    }
+    
+    // Find the closest named color
+    function findColorName(color) {
+        let closestDistance = Number.MAX_VALUE;
+        let closestColor = "Unknown";
+        
+        namedColors.forEach(namedColor => {
+            const distance = Math.sqrt(
+                Math.pow(color.r - namedColor.rgb[0], 2) +
+                Math.pow(color.g - namedColor.rgb[1], 2) +
+                Math.pow(color.b - namedColor.rgb[2], 2)
+            );
+            
+            if (distance < closestDistance && distance < namedColor.range) {
+                closestDistance = distance;
+                closestColor = namedColor.name;
+            }
+        });
+        
+        return closestColor;
+    }
+    
+    // Speech synthesis
+    function speakText(text) {
+        if ('speechSynthesis' in window) {
+            // Cancel any ongoing speech
+            window.speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+    
+    // Start/stop auto detection
+    function toggleAutoDetection() {
+        isAutoDetecting = !isAutoDetecting;
+        
+        if (isAutoDetecting) {
+            autoDetectToggle.innerHTML = '<i class="fas fa-sync fa-spin"></i> Auto-Detect: On';
+            autoDetectToggle.classList.remove('btn-outline-secondary');
+            autoDetectToggle.classList.add('btn-secondary');
+            
+            // Start interval for detection
+            detectionInterval = setInterval(detectObjects, detectionFrequency);
+            
+            // Initial detection
+            detectObjects();
+        } else {
+            autoDetectToggle.innerHTML = '<i class="fas fa-sync"></i> Auto-Detect: Off';
+            autoDetectToggle.classList.remove('btn-secondary');
+            autoDetectToggle.classList.add('btn-outline-secondary');
+            
+            // Clear interval
+            clearInterval(detectionInterval);
+        }
+    }
+    
+    // Pause/resume video
+    function togglePause() {
+        isPaused = !isPaused;
+        
+        if (isPaused) {
+            pauseBtn.innerHTML = '<i class="fas fa-play"></i> Resume';
+            pauseBtn.classList.remove('btn-warning');
+            pauseBtn.classList.add('btn-success');
+            
+            // Pause all video tracks
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => {
+                    track.enabled = false;
+                });
+            }
+        } else {
+            pauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+            pauseBtn.classList.remove('btn-success');
+            pauseBtn.classList.add('btn-warning');
+            
+            // Resume all video tracks
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => {
+                    track.enabled = true;
+                });
+            }
+            
+            // If auto-detection is on, immediately detect
+            if (isAutoDetecting) {
+                detectObjects();
+            }
+        }
+    }
+    
+    // Toggle speech
+    function toggleSpeech() {
+        speakEnabled = !speakEnabled;
+        
+        if (speakEnabled) {
+            speakToggle.innerHTML = '<i class="fas fa-volume-up"></i> Audio: On';
+            speakToggle.classList.remove('btn-outline-success');
+            speakToggle.classList.add('btn-success');
+        } else {
+            speakToggle.innerHTML = '<i class="fas fa-volume-up"></i> Audio: Off';
+            speakToggle.classList.remove('btn-success');
+            speakToggle.classList.add('btn-outline-success');
+            
+            // Cancel any ongoing speech
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        }
+    }
+    
+    // Cycle through detection frequencies
+    function cycleFrequency() {
+        if (detectionFrequency === 3000) {
+            detectionFrequency = 2000;
+            frequencyBtn.innerHTML = '<i class="fas fa-clock"></i> Frequency: Medium';
+        } else if (detectionFrequency === 2000) {
+            detectionFrequency = 1000;
+            frequencyBtn.innerHTML = '<i class="fas fa-clock"></i> Frequency: Fast';
+        } else {
+            detectionFrequency = 3000;
+            frequencyBtn.innerHTML = '<i class="fas fa-clock"></i> Frequency: Slow';
+        }
+        
+        // If auto-detection is on, restart interval with new frequency
+        if (isAutoDetecting) {
+            clearInterval(detectionInterval);
+            detectionInterval = setInterval(detectObjects, detectionFrequency);
+        }
+    }
+    
+    // Clean up resources
+    function cleanup() {
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+        }
+        
+        if (detectionInterval) {
+            clearInterval(detectionInterval);
+        }
+    }
+    
+    // Event listeners
+    captureBtn.addEventListener('click', detectObjects);
+    capturePhotoBtn.addEventListener('click', captureObjectImage);
+    recordVideoBtn.addEventListener('click', startRecording);
+    stopRecordingBtn.addEventListener('click', stopRecording);
+    pauseBtn.addEventListener('click', togglePause);
+    stopBtn.addEventListener('click', stopVideo);
+    clearBtn.addEventListener('click', clearAllDetections);
+    deleteAllBtn.addEventListener('click', clearAllCapturedImages);
+    autoDetectToggle.addEventListener('click', toggleAutoDetection);
+    frequencyBtn.addEventListener('click', cycleFrequency);
+    speakToggle.addEventListener('click', toggleSpeech);
+    document.getElementById('clearCapturedBtn').addEventListener('click', clearAllCapturedImages);
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (isModelLoaded) {
+            // ESC key to stop video
+            if (e.key === 'Escape') {
+                stopVideo();
+            }
+            // C key to capture all objects
+            else if (e.key === 'c' && !isPaused) {
+                captureAllObjects();
+            }
+        }
+    });
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', cleanup);
+    
+    // Capture image of specific object
+    function captureObjectImage(prediction, objectClass, colorName, objectColor, showMessage = true) {
+        const [x, y, width, height] = prediction.bbox;
+        
+        // Create a new canvas for the cropped image
+        const objectCanvas = document.createElement('canvas');
+        objectCanvas.width = width;
+        objectCanvas.height = height;
+        const objectCtx = objectCanvas.getContext('2d');
+        
+        // Draw only the object part from the main canvas
+        objectCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
+        
+        // Convert to data URL (PNG format)
+        const imageData = objectCanvas.toDataURL('image/png');
+        
+        // Add to captured images array
+        const timestamp = new Date().toLocaleString();
+        capturedImages.push({
+            imageData,
+            objectClass,
+            colorName,
+            objectColor,
+            timestamp
+        });
+        
+        // Display in the captured images container
+        updateCapturedImagesList();
+        
+        // Only show individual success messages if showMessage is true
+        if (showMessage) {
+            // Show success message
+            const successMessage = document.createElement('div');
+            successMessage.className = 'alert alert-success mt-2';
+            successMessage.textContent = `Captured image of ${colorName} ${objectClass}`;
+            document.querySelector('.video-container').appendChild(successMessage);
+            
+            // Remove success message after 3 seconds
+            setTimeout(() => {
+                successMessage.remove();
+            }, 3000);
+            
+            // Speak confirmation if enabled
+            if (speakEnabled) {
+                speakText(`Captured image of ${colorName} ${objectClass}`);
+            }
+        }
+    }
+    
+    // Update the list of captured images
+    function updateCapturedImagesList() {
+        if (capturedImages.length > 0) {
+            capturedImagesContainer.style.display = 'block';
+            capturedImagesList.innerHTML = '';
+            
+            capturedImages.forEach((capture, index) => {
+                const imageCard = document.createElement('div');
+                imageCard.className = 'image-card';
+                
+                const imageInfo = document.createElement('div');
+                imageInfo.className = 'image-info';
+                imageInfo.innerHTML = `${capture.colorName} ${capture.objectClass} <span class="text-muted">(${capture.timestamp})</span>`;
+                
+                const imageElement = document.createElement('img');
+                imageElement.className = 'captured-image';
+                imageElement.src = capture.imageData;
+                imageElement.alt = `${capture.colorName} ${capture.objectClass}`;
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-sm btn-danger mt-2';
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+                deleteBtn.addEventListener('click', () => {
+                    // Add visual feedback
+                    imageCard.style.backgroundColor = 'rgba(255, 220, 220, 0.5)';
+                    imageCard.style.borderColor = '#dc3545';
+                    
+                    // Add a small delay for visual feedback
+                    setTimeout(() => {
+                        capturedImages.splice(index, 1);
+                        updateCapturedImagesList();
+                    }, 300);
+                });
+                
+                const downloadBtn = document.createElement('a');
+                downloadBtn.className = 'btn btn-sm btn-primary mt-2 ml-2';
+                downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download';
+                downloadBtn.href = capture.imageData;
+                downloadBtn.download = `${capture.objectClass}_${capture.colorName}_${new Date().getTime()}.png`;
+                
+                imageCard.appendChild(imageInfo);
+                imageCard.appendChild(imageElement);
+                imageCard.appendChild(deleteBtn);
+                imageCard.appendChild(downloadBtn);
+                
+                capturedImagesList.appendChild(imageCard);
+            });
+        } else {
+            capturedImagesContainer.style.display = 'none';
+        }
+    }
+    
+    // Start the application
+    init();
+    
+    // Capture all objects in the current frame
+    async function captureAllObjects() {
+        if (!isModelLoaded || isPaused) return;
+        
+        try {
+            // Clear previous drawings
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw the current video frame
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Get image data for the entire frame
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // Detect objects
+            const predictions = await model.detect(video);
+            
+            if (predictions.length > 0) {
+                // Prepare audio description
+                let audioDescription = `Captured ${predictions.length} objects`;
+                
+                // Draw bounding boxes for visualization
+                predictions.forEach((prediction) => {
+                    const [x, y, width, height] = prediction.bbox;
+                    const objectClass = prediction.class;
+                    
+                    // Get the dominant color for this object region
+                    const objectColor = getDominantColorForRegion(imageData, x, y, width, height);
+                    const colorName = findColorName(objectColor);
+                    
+                    // Check if this is one of our specific objects of interest
+                    const isSpecific = isSpecificObject(objectClass);
+                    
+                    // Draw bounding box with highlighted border for specific objects
+                    if (isSpecific) {
+                        // Draw attention-grabbing double border for specific objects
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(x-1, y-1, width+2, height+2);
+                        ctx.strokeStyle = `rgb(${objectColor.r}, ${objectColor.g}, ${objectColor.b})`;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x, y, width, height);
+                    } else {
+                        // Regular border for other objects
+                        ctx.strokeStyle = `rgb(${objectColor.r}, ${objectColor.g}, ${objectColor.b})`;
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x, y, width, height);
+                    }
+                    
+                    // Add label with color
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.fillRect(x, y - 22, Math.min(width, 120), 22);
+                    ctx.fillStyle = isSpecific ? '#FFFF00' : `rgb(${objectColor.r}, ${objectColor.g}, ${objectColor.b})`;
+                    ctx.font = '14px Arial';
+                    ctx.fillText(`${objectClass} (${colorName})`, x + 4, y - 6);
+                    
+                    // Capture this object
+                    captureObjectImage(prediction, objectClass, colorName, objectColor, false);
+                });
+                
+                // Speak confirmation if enabled
+                if (speakEnabled) {
+                    speakText(audioDescription);
+                }
+                
+                // Show success message for all captures
+                const successMessage = document.createElement('div');
+                successMessage.className = 'alert alert-success mt-2';
+                successMessage.textContent = `Captured ${predictions.length} objects`;
+                document.querySelector('.video-container').appendChild(successMessage);
+                
+                // Remove success message after 3 seconds
+                setTimeout(() => {
+                    successMessage.remove();
+                }, 3000);
+            } else {
+                // Show no objects found message
+                const noObjectsMessage = document.createElement('div');
+                noObjectsMessage.className = 'alert alert-warning mt-2';
+                noObjectsMessage.textContent = 'No objects detected to capture';
+                document.querySelector('.video-container').appendChild(noObjectsMessage);
+                
+                // Remove message after 3 seconds
+                setTimeout(() => {
+                    noObjectsMessage.remove();
+                }, 3000);
+                
+                if (speakEnabled) {
+                    speakText('No objects detected to capture');
+                }
+            }
+        } catch (error) {
+            console.error("Error capturing all objects:", error);
+            errorMessage.textContent = `Error: ${error.message}`;
+            errorMessage.style.display = "block";
+        }
+    }
+    
+    // Complete stop video (different from pause)
+    function stopVideo() {
+        // Ask for confirmation to prevent accidental clicks
+        if (!confirm('Are you sure you want to stop video? This will turn off the camera.')) {
+            return;
+        }
+        
+        // Stop all ongoing processes
+        if (isAutoDetecting) {
+            toggleAutoDetection(); // Turn off auto-detection
+        }
+        
+        // Stop camera completely
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
+        }
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Display stop message on canvas
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Camera stopped', canvas.width/2, canvas.height/2 - 15);
+        ctx.font = '16px Arial';
+        ctx.fillText('Click "Restart Video" to resume', canvas.width/2, canvas.height/2 + 15);
+        
+        // Update UI
+        isPaused = true;
+        captureBtn.disabled = true;
+        capturePhotoBtn.disabled = true;
+        recordVideoBtn.disabled = true;
+        stopRecordingBtn.disabled = true;
+        pauseBtn.disabled = true;
+        stopBtn.disabled = true;
+        clearBtn.disabled = true;
+        deleteAllBtn.disabled = true;
+        autoDetectToggle.disabled = true;
+        frequencyBtn.disabled = true;
+        
+        // Add restart button
+        const videoContainer = document.querySelector('.video-container');
+        
+        // Remove any existing restart buttons first
+        const existingRestartBtn = document.getElementById('restartBtn');
+        if (existingRestartBtn) {
+            existingRestartBtn.remove();
+        }
+        
+        // Create restart button
+        const restartBtn = document.createElement('button');
+        restartBtn.id = 'restartBtn';
+        restartBtn.className = 'btn btn-success mt-3';
+        restartBtn.style.position = 'absolute';
+        restartBtn.style.top = '50%';
+        restartBtn.style.left = '50%';
+        restartBtn.style.transform = 'translate(-50%, 40px)';
+        restartBtn.style.zIndex = '10';
+        restartBtn.innerHTML = '<i class="fas fa-redo"></i> Restart Video';
+        
+        restartBtn.addEventListener('click', () => {
+            // Remove the restart button
+            restartBtn.remove();
+            // Re-initialize the camera and detector
+            init();
+        });
+        
+        videoContainer.appendChild(restartBtn);
+        
+        // Audio notification
+        if (speakEnabled) {
+            speakText('Video stopped. Click restart to resume.');
+        }
+    }
+    
+    // Clear all detected objects
+    function clearAllDetections() {
+        // Clear object list
+        objectsList.innerHTML = '';
+        detectionResults.style.display = 'none';
+        
+        // Clear canvas (but keep video)
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Show confirmation
+        const confirmMessage = document.createElement('div');
+        confirmMessage.className = 'alert alert-secondary mt-2';
+        confirmMessage.textContent = 'All detections cleared';
+        document.querySelector('.video-container').appendChild(confirmMessage);
+        
+        // Remove message after 3 seconds
+        setTimeout(() => {
+            confirmMessage.remove();
+        }, 3000);
+        
+        // Audio confirmation
+        if (speakEnabled) {
+            speakText('All detections cleared');
+        }
+    }
+    
+    // Delete all captured images
+    function clearAllCapturedImages() {
+        if (capturedImages.length === 0) return;
+        
+        // Confirm before deleting
+        if (confirm('Are you sure you want to delete all captured images?')) {
+            // Clear the captured images array
+            capturedImages = [];
+            
+            // Update the UI
+            capturedImagesContainer.style.display = 'none';
+            
+            // Show confirmation
+            const confirmMessage = document.createElement('div');
+            confirmMessage.className = 'alert alert-secondary mt-2';
+            confirmMessage.textContent = 'All captured images deleted';
+            document.querySelector('.video-container').appendChild(confirmMessage);
+            
+            // Remove message after 3 seconds
+            setTimeout(() => {
+                confirmMessage.remove();
+            }, 3000);
+            
+            // Audio confirmation
+            if (speakEnabled) {
+                speakText('All captured images deleted');
+            }
+        }
+    }
+</script>
+{% endblock %} 
